@@ -1,0 +1,26 @@
+{
+  "name": "project-tracker",
+  "version": "1.0.0",
+  "description": "Kanban project tracker with Notion-style markdown pages, stored as markdown files on disk",
+  "scripts": {
+    "dev": "concurrently -k -n api,web \"node --watch server/index.js\" \"vite\"",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "test": "node --test server/*.test.js"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@milkdown/crepe": "^7.22.3",
+    "@milkdown/kit": "^7.22.3",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "vite": "^8.3.4"
+  },
+  "type": "module",
+  "private": true
+}

@@ -1,0 +1,87 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { Store, parseMarkdown, stringifyMarkdown } from './store.js';
+
+async function freshStore() {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-'));
+  const store = new Store(dir);
+  await store.init();
+  return store;
+}
+
+test('frontmatter round-trips and keeps the body intact', () => {
+  const body = '# Hello\n\n```js\nconsole.log(1)\n```\n';
+  const text = stringifyMarkdown({ title: 'X', due: '2026-10-15', tags: ['a', 'b'] }, body);
+  const { data, body: out } = parseMarkdown(text);
+  assert.deepEqual(data, { title: 'X', due: '2026-10-15', tags: ['a', 'b'] });
+  assert.equal(out, body);
+});
+
+test('malformed frontmatter is preserved as body text', () => {
+  const text = '---\n: [oops\n---\nbody';
+  assert.deepEqual(parseMarkdown(text), { data: {}, body: text });
+});
+
+test('first run seeds a workspace and a sample project', async () => {
+  const store = await freshStore();
+  const ws = await store.getWorkspace();
+  assert.ok(ws.columns.length >= 1);
+  const projects = await store.listProjects();
+  assert.equal(projects.length, 1);
+  assert.equal((await store.getProject(projects[0].id)).pages.length, 1);
+});
+
+test('project lifecycle: create, patch properties, subtasks, pages, trash', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Website Redesign', status: 'backlog' });
+  assert.equal(p.id, 'website-redesign');
+  const dup = await store.createProject({ title: 'Website Redesign' });
+  assert.equal(dup.id, 'website-redesign-2');
+
+  await store.updateProject(p.id, { properties: { priority: 'High', owner: 'Cade' }, subtasks: [{ text: 'a', done: true }, 'b'] });
+  await store.updateProject(p.id, { properties: { owner: null } });
+  const got = await store.getProject(p.id);
+  assert.deepEqual(got.properties, { priority: 'High' });
+  assert.deepEqual(got.subtasks, [{ text: 'a', done: true }, { text: 'b', done: false }]);
+
+  const file = await fs.readFile(path.join(store.projectsDir, p.id, 'index.md'), 'utf8');
+  assert.match(file, /^---\ntitle: Website Redesign\n/);
+  assert.match(file, /priority: High/);
+
+  const page = await store.createPage(p.id, { title: 'Meeting notes' });
+  await store.updatePage(p.id, page.id, { body: 'hi' });
+  assert.equal((await store.getPage(p.id, page.id)).body, 'hi');
+  await store.deletePage(p.id, page.id);
+  await store.deleteProject(p.id);
+  assert.equal((await store.listProjects()).some((x) => x.id === p.id), false);
+  assert.equal((await fs.readdir(store.trashDir)).length, 2);
+});
+
+test('body saves detect conflicts, but metadata edits do not cause them', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Conflicts' });
+  const a = await store.updateProject(p.id, { body: 'one', baseVersion: p.version });
+  await store.updateProject(p.id, { subtasks: [{ text: 'x', done: false }] });
+  const b = await store.updateProject(p.id, { body: 'two', baseVersion: a.version });
+  await assert.rejects(store.updateProject(p.id, { body: 'stale', baseVersion: a.version }), (e) => e.status === 409 && e.extra.current.body === 'two');
+  assert.equal((await store.getProject(p.id)).body, b.body);
+});
+
+test('board reorder moves cards between columns', async () => {
+  const store = await freshStore();
+  const a = await store.createProject({ title: 'A', status: 'backlog' });
+  const b = await store.createProject({ title: 'B', status: 'backlog' });
+  await store.reorderColumn('done', [b.id, a.id]);
+  const list = (await store.listProjects()).filter((p) => p.status === 'done');
+  assert.deepEqual(list.map((p) => p.id), [b.id, a.id]);
+});
+
+test('ids are validated against path traversal', async () => {
+  const store = await freshStore();
+  await assert.rejects(store.getProject('../etc'), (e) => e.status === 400);
+  await assert.rejects(store.getPage('x', '..%2Fpasswd'), (e) => e.status === 400);
+  await assert.rejects(store.saveWorkspace({ columns: [{ id: 'a' }], properties: [{ key: 'status', type: 'text' }] }), (e) => e.status === 400);
+});
