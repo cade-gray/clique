@@ -109,6 +109,23 @@ export function formatDate(v) {
   return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+export function formatDateTime(v) {
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+// "5 min ago", "3 days ago", or the date once it is older than a month.
+export function timeAgo(v) {
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return '';
+  const s = Math.max(0, (Date.now() - d.getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} hr ago`;
+  if (s < 86400 * 30) return `${Math.floor(s / 86400)} day${s >= 86400 * 2 ? 's' : ''} ago`;
+  return formatDate(v);
+}
+
 // Inline editor used on the project page.
 export function PropertyInput({ def, value, onChange }) {
   switch (def.type) {

@@ -40,6 +40,15 @@ systems:
 pattern: REST API
 estimate: 20
 summary: Approved loans are boarded to core and the member record is updated without re-keying.
+updates:
+  - id: e5f60701
+    text: Boarding service works end to end against our mock. Vendor sandbox is still needed for the real test.
+    at: 2026-10-13T18:00:00.000Z
+    author: Alex
+  - id: e5f60702
+    text: Sandbox key expired yesterday. Opened a ticket with the vendor and marked this blocked.
+    at: 2026-10-15T20:30:00.000Z
+    author: Sam
 ---
 
 ## Why

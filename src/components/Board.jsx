@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { navigate } from '../App.jsx';
-import { PropertyValue, isEmpty } from './props.jsx';
+import { PropertyValue, formatDateTime, isEmpty, timeAgo } from './props.jsx';
 
 const POLL_MS = 10000;
 
@@ -167,8 +167,16 @@ function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd
               </div>
             ))}
         </div>
+        {project.latestUpdate && (
+          <div className="card-update" title={formatDateTime(project.latestUpdate.at)}>
+            <div className="card-update-text">{project.latestUpdate.text}</div>
+            <div className="card-update-meta">
+              {[project.latestUpdate.author, timeAgo(project.latestUpdate.at)].filter(Boolean).join(' · ')}
+            </div>
+          </div>
+        )}
         {subtasks.total > 0 && (
-          <div className="card-progress" title={`${subtasks.done} of ${subtasks.total} subtasks done`}>
+          <div className="card-progress" title={`${subtasks.done} of ${subtasks.total} to-dos done`}>
             <div className="bar">
               <div style={{ width: `${(subtasks.done / subtasks.total) * 100}%` }} />
             </div>

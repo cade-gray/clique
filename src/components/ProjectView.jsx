@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { navigate } from '../App.jsx';
 import DocBody from './DocBody.jsx';
 import Subtasks from './Subtasks.jsx';
+import Updates from './Updates.jsx';
 import { PEOPLE_LIST_ID, PropertyInput, toPeople } from './props.jsx';
 
 export default function ProjectView({ id, pageId, workspace }) {
@@ -24,7 +25,7 @@ export default function ProjectView({ id, pageId, workspace }) {
     load();
   }, [load]);
 
-  // Metadata edits (title, status, properties, subtasks) save immediately and never touch the body.
+  // Metadata edits (title, status, properties, to-dos) save immediately and never touch the body.
   async function patch(fields) {
     setProject((p) => ({
       ...p,
@@ -131,6 +132,8 @@ export default function ProjectView({ id, pageId, workspace }) {
               ))}
             </datalist>
             <Subtasks items={project.subtasks} onChange={(subtasks) => patch({ subtasks })} />
+
+            <Updates projectId={id} updates={project.updates} onChange={(meta) => setProject((p) => ({ ...p, ...meta }))} />
 
             <DocBody
               docKey={`project:${id}`}

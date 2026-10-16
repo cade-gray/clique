@@ -143,3 +143,41 @@ test('listProjects can include full subtasks', async () => {
     items: [{ text: 'a', done: true, owners: ['Ann'] }, { text: 'b', done: false }],
   });
 });
+
+test('status updates append, show as latest, and can be deleted', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Updates' });
+  assert.equal(p.latestUpdate, null);
+  await assert.rejects(store.addUpdate(p.id, { text: '   ' }), (e) => e.status === 400);
+  await store.addUpdate(p.id, { text: 'Kicked off', author: ' Ann ' });
+  const got = await store.addUpdate(p.id, { text: 'Vendor call went well' });
+  assert.equal(got.updates.length, 2);
+  assert.equal(got.updates[0].author, 'Ann');
+  assert.equal(got.updates[1].author, undefined);
+  const summary = (await store.listProjects()).find((x) => x.id === p.id);
+  assert.equal(summary.latestUpdate.text, 'Vendor call went well');
+  assert.equal(summary.updateCount, 2);
+  // Property/body edits never disturb the timeline.
+  await store.updateProject(p.id, { properties: { priority: 'High' }, body: 'hi' });
+  assert.equal((await store.getProject(p.id)).updates.length, 2);
+  await store.deleteUpdate(p.id, got.updates[1].id);
+  assert.equal((await store.getProject(p.id)).latestUpdate.text, 'Kicked off');
+  await assert.rejects(store.deleteUpdate(p.id, 'nope'), (e) => e.status === 404);
+  // Posting at the same time keeps every entry.
+  await Promise.all(['a', 'b', 'c'].map((t) => store.addUpdate(p.id, { text: t })));
+  assert.equal((await store.getProject(p.id)).updates.length, 4);
+});
+
+test('subtasks keep a completion time only while checked off', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'History' });
+  const at = '2026-10-01T12:00:00.000Z';
+  await store.updateProject(p.id, {
+    subtasks: [{ text: 'a', done: true, doneAt: at }, { text: 'b', done: false, doneAt: at }, { text: 'c', done: true, doneAt: 'garbage' }],
+  });
+  assert.deepEqual((await store.getProject(p.id)).subtasks, [
+    { text: 'a', done: true, doneAt: at },
+    { text: 'b', done: false },
+    { text: 'c', done: true },
+  ]);
+});

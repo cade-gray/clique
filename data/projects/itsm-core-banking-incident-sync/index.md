@@ -38,6 +38,15 @@ pattern: Webhook / events
 estimate: 12
 link: https://example.com/runbooks/itsm-core
 summary: Core batch failures open and update ITSM incidents automatically.
+updates:
+  - id: a1b2c301
+    text: "Load test passed: 500 alerts in 4 minutes with no duplicate incidents."
+    at: 2026-08-10T14:05:00.000Z
+    author: Priya
+  - id: a1b2c302
+    text: Live in production. Watching the first batch window tonight; on-call has the runbook.
+    at: 2026-08-14T16:30:00.000Z
+    author: Alex
 ---
 
 ## What it does

@@ -35,6 +35,15 @@ systems:
 pattern: REST API
 estimate: 8
 summary: Show linked ITSM change requests on a Clique card and move the card when the change closes.
+updates:
+  - id: d4e5f601
+    text: Change numbers now saved on projects and polled every 5 minutes.
+    at: 2026-10-12T14:10:00.000Z
+    author: Sam
+  - id: d4e5f602
+    text: "Next up: moving the card to Done when the change closes. Need to agree rate limits with the ITSM admins."
+    at: 2026-10-15T19:00:00.000Z
+    author: Jordan
 ---
 
 ## Goal
