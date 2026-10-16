@@ -15,7 +15,7 @@ const api = express.Router();
 api.get('/workspace', h(() => store.getWorkspace()));
 api.put('/workspace', h((req) => store.saveWorkspace(req.body)));
 
-api.get('/projects', h(() => store.listProjects()));
+api.get('/projects', h((req) => store.listProjects({ withSubtasks: req.query.include === 'subtasks' })));
 api.post('/projects', h((req) => store.createProject(req.body)));
 api.get('/projects/:id', h((req) => store.getProject(req.params.id)));
 api.patch('/projects/:id', h((req) => store.updateProject(req.params.id, req.body)));

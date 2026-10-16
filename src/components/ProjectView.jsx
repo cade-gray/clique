@@ -61,7 +61,7 @@ export default function ProjectView({ id, pageId, workspace }) {
     <div className="project">
       <aside className="sidebar">
         <a href="#/" className="back">
-          ← Board
+          ← Board view
         </a>
         <div className="sidebar-title">{project.title}</div>
         <nav className="pages">

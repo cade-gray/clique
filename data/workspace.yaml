@@ -22,22 +22,45 @@ properties:
     name: Owners
     type: people
   - key: due
-    name: Due
+    name: Go-live
     type: date
-  - key: labels
-    name: Labels
+  - key: systems
+    name: Systems
     type: multi_select
     options:
-      - value: Frontend
+      - value: Core banking
         color: blue
-      - value: Backend
-        color: purple
-      - value: Design
-        color: pink
-      - value: Bug
-        color: red
-      - value: Docs
+      - value: ITSM
+        color: orange
+      - value: Online banking
         color: green
+      - value: Card processor
+        color: purple
+      - value: Loan origination
+        color: yellow
+      - value: CRM
+        color: pink
+      - value: Identity
+        color: red
+      - value: Data warehouse
+        color: brown
+      - value: Clique
+        color: gray
+  - key: pattern
+    name: Pattern
+    type: select
+    options:
+      - value: REST API
+        color: blue
+      - value: SFTP file feed
+        color: brown
+      - value: Webhook / events
+        color: purple
+      - value: Database sync
+        color: gray
   - key: link
-    name: Repo
+    name: Runbook
     type: url
+  - key: summary
+    name: Summary
+    type: text

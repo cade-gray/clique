@@ -277,7 +277,8 @@ export class Store {
     };
   }
 
-  async listProjects() {
+  // `withSubtasks` adds the full subtask list to each summary (used by the list view and exports).
+  async listProjects({ withSubtasks = false } = {}) {
     const ws = await this.getWorkspace();
     const entries = await fs.readdir(this.projectsDir, { withFileTypes: true });
     const out = [];
@@ -286,7 +287,9 @@ export class Store {
       const file = path.join(this.projectsDir, e.name, 'index.md');
       if (!(await exists(file))) continue;
       const { data } = parseMarkdown(await fs.readFile(file, 'utf8'));
-      out.push(this.toSummary(e.name, data, ws));
+      const summary = this.toSummary(e.name, data, ws);
+      if (withSubtasks) summary.subtasks.items = normalizeSubtasks(data.subtasks);
+      out.push(summary);
     }
     return out.sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
   }

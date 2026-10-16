@@ -1,0 +1,55 @@
+---
+title: Online banking real-time balances
+status: review
+order: 0
+created: 2026-10-16T02:32:36.255Z
+updated: 2026-10-16T02:32:36.257Z
+subtasks:
+  - text: Expose a balance endpoint from the core gateway
+    done: true
+    owners:
+      - Alex
+  - text: Cache with a 5 second TTL
+    done: true
+    owners:
+      - Priya
+  - text: Pen test sign-off
+    done: true
+    owners:
+      - Sam
+  - text: Security review of token scopes
+    done: false
+    owners:
+      - Alex
+  - text: Cut over 10% of members
+    done: false
+    owners:
+      - Priya
+      - Sam
+priority: High
+owner:
+  - Priya
+  - Alex
+  - Sam
+due: 2026-10-30
+systems:
+  - Online banking
+  - Core banking
+pattern: REST API
+estimate: 15
+link: https://example.com/runbooks/balances
+summary: Members see posted and pending balances within two seconds of a transaction.
+---
+
+## Overview
+
+Online banking previously showed balances from the nightly snapshot. This integration reads the live ledger through the core gateway.
+
+## Targets
+
+| Metric | Target | Current |
+| --- | --- | --- |
+| p95 latency | < 800 ms | 610 ms |
+| Availability | 99.9% | 99.95% |
+
+If the gateway is down the app falls back to the last cached balance and labels it *as of* the cache time.

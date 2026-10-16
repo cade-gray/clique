@@ -129,3 +129,17 @@ test('blocked flag carries an optional reason that clears when unblocked', async
   const file = await fs.readFile(path.join(store.projectsDir, p.id, 'index.md'), 'utf8');
   assert.doesNotMatch(file, /blocked/);
 });
+
+test('listProjects can include full subtasks', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'With subtasks' });
+  await store.updateProject(p.id, { subtasks: [{ text: 'a', done: true, owners: ['Ann'] }, 'b'] });
+  const plain = (await store.listProjects()).find((x) => x.id === p.id);
+  assert.equal(plain.subtasks.items, undefined);
+  const full = (await store.listProjects({ withSubtasks: true })).find((x) => x.id === p.id);
+  assert.deepEqual(full.subtasks, {
+    done: 1,
+    total: 2,
+    items: [{ text: 'a', done: true, owners: ['Ann'] }, { text: 'b', done: false }],
+  });
+});
