@@ -1,7 +1,7 @@
 ---
 title: Clique ↔ ITSM project sync
 status: in-progress
-order: 1
+order: 2
 created: 2026-10-16T02:32:36.248Z
 updated: 2026-10-16T02:32:36.250Z
 subtasks:

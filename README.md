@@ -140,7 +140,7 @@ The folder can be opened as an Obsidian vault, edited by hand, backed up, or put
 
 ### Shared editing
 
-Property, status and to-do changes save immediately and merge per field. Page bodies autosave after a short pause; if someone else saved the same page in the meantime, the editor shows a banner to load their version or overwrite with yours instead of silently clobbering it.
+Property, status and to-do changes save immediately. Each property and the status merge per field; the to-do list is saved as a whole, so if two people edit the to-dos of the same project at the same moment, the later save wins. Status updates are appended, so simultaneous posts are all kept. Page bodies autosave after a short pause; if someone else saved the same page in the meantime, the editor shows a banner to load their version or overwrite with yours instead of silently clobbering it.
 
 ## Features
 
@@ -166,20 +166,20 @@ Environment variables the server reads:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORT` | `3001` | Port to listen on. Under IIS the port comes from `HTTP_PLATFORM_PORT` instead, which IIS sets for you. |
-| `DATA_DIR` | `./data` | Where `workspace.yaml` and `projects/` live. Use an absolute path in production so redeploys never touch your data. |
+| `DATA_DIR` | `./data` | Where `workspace.yaml` and `projects/` live. A relative path is resolved from the app folder. Use an absolute path in production so redeploys never touch your data. |
 | `BASE_PATH` | empty | Set to `/clique` if the app is served from a sub-path instead of the site root. |
 
 ### Windows Server with IIS
 
 `web.config` is set up for [HttpPlatformHandler](https://www.iis.net/downloads/microsoft/httpplatformhandler), which makes IIS start Node, restart it if it crashes, and forward requests to it. Every request goes to Node, so IIS never serves files from the repo folder directly.
 
-These steps assume Windows Server 2019 or later, a site folder of `C:\inetpub\clique`, and data in `D:\clique-data`. Run PowerShell as Administrator.
+These steps assume Windows Server 2019 or later, a site folder of `C:\inetpub\clique`, data in `D:\clique-data`, and a DNS name such as `clique.yourcompany.local` pointing at the server. Run PowerShell as Administrator.
 
 **1. Install the prerequisites**
 
 ```powershell
-# IIS and the Application Initialization feature (needed to start the site on reboot)
-Install-WindowsFeature Web-Server, Web-Mgmt-Console, Web-AppInit
+# IIS, Application Initialization (warm start after reboot) and Windows Authentication (step 6)
+Install-WindowsFeature Web-Server, Web-Mgmt-Console, Web-AppInit, Web-Windows-Auth
 ```
 
 - Install the **Node.js 22 LTS** 64-bit MSI from nodejs.org (default path `C:\Program Files\nodejs`).
@@ -195,22 +195,30 @@ git clone https://github.com/<your-org>/<your-repo>.git C:\inetpub\clique
 cd C:\inetpub\clique
 npm ci
 npm run build
-New-Item -ItemType Directory -Force logs | Out-Null
 ```
+
+`npm ci` downloads packages from registry.npmjs.org. If the server reaches the internet through a proxy, set it first (`npm config set proxy http://proxy:8080` and `npm config set https-proxy http://proxy:8080`). If the server has no internet access at all, build on any machine that does: run `npm ci`, `npm run build`, then `npm ci --omit=dev`, and copy `dist\`, `server\`, `logs\`, `node_modules\`, `web.config`, `package.json` and `package-lock.json` to `C:\inetpub\clique`. After `--omit=dev` the only packages left (Express and yaml) are plain JavaScript, so a copy built on macOS or Linux runs fine on Windows. Just don't run `npm run build` on the server from that copy.
 
 **3. Put the data somewhere safe**
 
-Keep the data outside the site folder so redeploys can't overwrite it. Copy the starter data (or your own) there:
-
-```powershell
-New-Item -ItemType Directory -Force D:\clique-data | Out-Null
-Copy-Item -Recurse C:\inetpub\clique\data\* D:\clique-data\
-```
-
-Then set `DATA_DIR` in `web.config` to the absolute path:
+Keep the data outside the site folder so redeploys can't overwrite it, and set `DATA_DIR` in `web.config` to that absolute path:
 
 ```xml
 <environmentVariable name="DATA_DIR" value="D:\clique-data" />
+```
+
+Then pick how your board starts:
+
+```powershell
+New-Item -ItemType Directory -Force D:\clique-data | Out-Null
+
+# a) Start from the example board (credit union integrations), then delete the example cards in the app:
+Copy-Item -Recurse C:\inetpub\clique\data\* D:\clique-data\
+
+# b) Keep the example columns and properties (Systems, Go-live, ...) but start with no projects:
+Copy-Item C:\inetpub\clique\data\workspace.yaml D:\clique-data\
+
+# c) Copy nothing: Clique creates default columns, three properties and a welcome project on first start.
 ```
 
 If `processPath` in `web.config` doesn't match where `node.exe` is installed, fix that too.
@@ -224,12 +232,16 @@ New-WebAppPool -Name Clique
 Set-ItemProperty IIS:\AppPools\Clique -Name managedRuntimeVersion -Value ''          # No Managed Code
 Set-ItemProperty IIS:\AppPools\Clique -Name startMode -Value AlwaysRunning           # start with Windows
 Set-ItemProperty IIS:\AppPools\Clique -Name processModel.idleTimeout -Value ([TimeSpan]::Zero)  # never go idle
+Set-ItemProperty IIS:\AppPools\Clique -Name recycling.disallowOverlappingRotation -Value $true   # one Node at a time
+Set-ItemProperty IIS:\AppPools\Clique -Name recycling.periodicRestart.time -Value ([TimeSpan]::Zero)  # no daily recycle
 
-New-Website -Name Clique -PhysicalPath C:\inetpub\clique -ApplicationPool Clique -Port 80
+New-Website -Name Clique -PhysicalPath C:\inetpub\clique -ApplicationPool Clique -Port 80 -HostHeader clique.yourcompany.local
 Set-ItemProperty IIS:\Sites\Clique -Name applicationDefaults.preloadEnabled -Value $true
 ```
 
-Add a host header and an HTTPS binding as usual (`New-WebBinding`, or the IIS Manager **Bindings** dialog) and install your certificate. If another site already uses port 80, change `-Port` or add a host name.
+- **Port 80 is already taken** by the *Default Web Site* on a fresh IIS install, which is why the site above uses a host name. If you'd rather give Clique the whole server, stop that site instead (`Stop-Website 'Default Web Site'` and `Set-ItemProperty 'IIS:\Sites\Default Web Site' serverAutoStart $false`) and leave out `-HostHeader`.
+- **Overlapping recycle is turned off on purpose.** By default IIS starts a new worker before the old one stops, which would briefly run two Node processes against the same files. With it off, a recycle means a second or two of downtime instead (the editor retries saves).
+- For HTTPS, add a binding (`New-WebBinding -Name Clique -Protocol https -Port 443 -HostHeader clique.yourcompany.local -SslFlags 1`) and attach your certificate in IIS Manager → **Bindings**.
 
 **5. Give the app pool access to the files**
 
@@ -241,31 +253,58 @@ icacls C:\inetpub\clique\logs /grant "IIS AppPool\Clique:(OI)(CI)M"
 icacls D:\clique-data /grant "IIS AppPool\Clique:(OI)(CI)M" /T
 ```
 
-**6. Check it works**
+**6. Let in only your domain users**
 
-Browse to the site. If you get a 502 or 500, read `C:\inetpub\clique\logs\node.log*` (Node's output) and the Windows Event Viewer. You can also run `node server\index.js` by hand in the site folder to see any startup error. The most common causes are a wrong `processPath`, a missing `npm run build`, or missing write permission on `DATA_DIR` or `logs`.
+Clique has no login of its own, so let IIS check who people are. Turning off anonymous access and turning on Windows Authentication means only signed-in domain accounts can open the site:
 
-**7. Make it start on reboot**
+```powershell
+Set-WebConfigurationProperty -PSPath IIS:\ -Location Clique -Filter system.webServer/security/authentication/anonymousAuthentication -Name enabled -Value $false
+Set-WebConfigurationProperty -PSPath IIS:\ -Location Clique -Filter system.webServer/security/authentication/windowsAuthentication -Name enabled -Value $true
+```
 
-IIS itself starts automatically with Windows (the World Wide Web Publishing Service is set to Automatic). With HttpPlatformHandler, Node only starts when IIS first needs it, so three settings make it come up without anyone visiting the site. Step 4 already applied them:
+Browsers sign people in silently when the site is in the *Local intranet* zone (a single-label name like `http://clique/`, or a host added to that zone by group policy). Otherwise they see a sign-in prompt and can use their domain account. To limit it to one team, add an **Authorization Rules** entry in IIS Manager that allows only that AD group.
+
+**7. Check it works**
+
+Browse to the site. If it doesn't load:
+
+| What you see | Usual cause |
+| --- | --- |
+| HTTP 500.19 | HttpPlatformHandler isn't installed, so IIS doesn't understand `web.config`. |
+| HTTP 502.3 or 502.5 | Node didn't start. Read the newest `C:\inetpub\clique\logs\node.log*` file. |
+| `node.log` says *could not open its data folder* | Wrong `DATA_DIR`, or the app pool has no modify rights on it (step 5). |
+| `node.log` says *Cannot find module ...\server\index.js* | Node started in a different folder. Set `arguments="C:\inetpub\clique\server\index.js"` in `web.config`. |
+| A blank page | `npm run build` wasn't run, so `dist\` is missing. |
+| "The server cannot write to its data folder" in the app | Permissions on `D:\clique-data` (step 5). |
+
+You can also run `node server\index.js` by hand in the site folder to see startup errors directly (it listens on port 3001).
+
+**8. Make it start on reboot**
+
+The site comes back by itself after a reboot either way: IIS starts with Windows (the World Wide Web Publishing Service is Automatic), and HttpPlatformHandler launches Node on the first request. Step 4 also makes Node start straight away, so nobody waits on the first visit, and keeps it running:
 
 1. App pool **Start Mode = AlwaysRunning**, so the worker process starts with IIS instead of on the first request.
 2. Site **Preload Enabled = true**, so IIS sends a warm-up request that launches Node. This needs the **Application Initialization** feature from step 1.
 3. App pool **Idle Time-out = 0**, so IIS doesn't shut Node down after 20 idle minutes.
 
-To confirm, restart the server, wait a minute without opening the site, and run `Get-Process node`. A running `node` process means it worked. Also keep the app pool's **Rapid-Fail Protection** at its defaults so IIS restarts a crashing app.
+To confirm, restart the server and open the site from your PC without logging on to the server. Keep the app pool's **Rapid-Fail Protection** at its defaults so IIS restarts a crashing app.
+
+With Windows Authentication on (step 6), IIS's warm-up request is anonymous and gets refused, so Node starts on the first real visit instead. That is expected: the first visit after a reboot just takes a second longer. If you check with `Get-Process node` straight after a reboot, it may not be running until someone opens the site.
 
 **Updating later**
 
 ```powershell
 cd C:\inetpub\clique
+Stop-WebAppPool Clique
 git pull
 npm ci
 npm run build
-Restart-WebAppPool Clique
+Start-WebAppPool Clique
 ```
 
-Your data in `D:\clique-data` is untouched. **Back it up** with your normal server backup, or commit it to a private git repo on a schedule.
+The site is down for the minute this takes. Your data in `D:\clique-data` is untouched. Your `DATA_DIR` edit to `web.config` is a local change that `git pull` keeps; if a pull ever stops because `web.config` also changed in the repo, run `git stash`, `git pull`, `git stash pop` and check the file.
+
+**Backups.** Include `D:\clique-data` in your normal server backup, or commit it to a private git repo on a schedule. Deleted projects and pages are moved to `D:\clique-data\.trash` rather than erased, so you can restore them by moving the folder back into `projects\`.
 
 **Alternative: run Node as a Windows service**
 
@@ -281,11 +320,11 @@ nssm set Clique AppStderr C:\inetpub\clique\logs\node.log
 nssm start Clique
 ```
 
-Run it as a low-privilege account with modify rights on `D:\clique-data` (`nssm set Clique ObjectName ...`) rather than LocalSystem. To publish it through IIS, install **URL Rewrite** and **Application Request Routing** (enable the proxy in ARR), replace the `httpPlatform` handler in `web.config` with a rule that proxies to `http://localhost:3001/{R:1}`, and host it at the site root (not a virtual directory). Or skip IIS and let people use `http://servername:3001` behind the Windows firewall.
+Run it as a low-privilege account with modify rights on `D:\clique-data` (`nssm set Clique ObjectName ...`) rather than LocalSystem. To publish it through IIS, install **URL Rewrite** and **Application Request Routing** (enable the proxy in ARR), replace the `httpPlatform` handler in `web.config` with a rule that proxies to `http://localhost:3001/{R:1}`, and host it at the site root (not a virtual directory). Or skip IIS and let people use `http://servername:3001` behind the Windows firewall, but then there is no sign-in at all.
 
-**Windows authentication (later)**
+**Recording who made changes (later)**
 
-Not wired up yet. The plan is to enable Windows Authentication on the IIS site so only domain users get in, then pass the signed-in user name to Node (for example via an IIS URL Rewrite server variable such as `X-Remote-User` = `{LOGON_USER}`) so pages can record who edited them. Until then, restrict the site with Windows Authentication alone (disable Anonymous Authentication in IIS) or an IP restriction rule, so only your domain users can open it. The storage format does not depend on the backend, so moving the API to ASP.NET Core later is also an option if tighter Windows auth integration is wanted.
+Step 6 controls who can get in, but Clique doesn't yet know who each person is: status updates use the name people type. The plan is to pass the signed-in Windows user name from IIS to Node (for example `forwardWindowsAuthToken`, or an IIS URL Rewrite server variable such as `X-Remote-User` = `{LOGON_USER}`) so updates and edits can be attributed automatically. The storage format does not depend on the backend, so moving the API to ASP.NET Core later is also an option if tighter Windows auth integration is wanted.
 
 ### Linux server (DigitalOcean Droplet or any VPS)
 

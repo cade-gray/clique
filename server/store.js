@@ -106,11 +106,29 @@ async function exists(p) {
   }
 }
 
+// On Windows, antivirus, the search indexer, backup agents or an editor holding a file open
+// can make a rename fail for a moment with EPERM/EBUSY/EACCES. Retry for a few seconds first.
+async function renameWithRetry(from, to) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fs.rename(from, to);
+    } catch (e) {
+      if (attempt >= 10 || !['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) throw e;
+      await new Promise((r) => setTimeout(r, 50 * attempt));
+    }
+  }
+}
+
 // Atomic write: temp file + rename, so a crash never leaves half a file behind.
 async function writeFileAtomic(file, content) {
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
   await fs.writeFile(tmp, content, 'utf8');
-  await fs.rename(tmp, file);
+  try {
+    await renameWithRetry(tmp, file);
+  } catch (e) {
+    await fs.rm(tmp, { force: true });
+    throw e;
+  }
 }
 
 // Serialise read-modify-write cycles per file within this process.
@@ -410,6 +428,9 @@ export class Store {
 
   // Set column + order for a whole column at once (used by board drag and drop).
   async reorderColumn(status, ids) {
+    const ws = await this.getWorkspace();
+    if (!ws.columns.some((c) => c.id === status)) throw new HttpError(400, 'Unknown status');
+    if (!Array.isArray(ids)) throw new HttpError(400, 'ids must be a list');
     for (const [i, id] of ids.entries()) {
       const file = this.projectFile(id);
       await withLock(file, async () => {
@@ -423,7 +444,7 @@ export class Store {
   async moveToTrash(src, name) {
     await fs.mkdir(this.trashDir, { recursive: true });
     const stamp = now().replace(/[:.]/g, '-');
-    await fs.rename(src, path.join(this.trashDir, `${stamp}-${name}`));
+    await renameWithRetry(src, path.join(this.trashDir, `${stamp}-${name}`));
   }
 
   async deleteProject(id) {

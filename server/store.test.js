@@ -77,6 +77,8 @@ test('board reorder moves cards between columns', async () => {
   await store.reorderColumn('done', [b.id, a.id]);
   const list = (await store.listProjects()).filter((p) => p.status === 'done');
   assert.deepEqual(list.map((p) => p.id), [b.id, a.id]);
+  await assert.rejects(store.reorderColumn('nope', [a.id]), (e) => e.status === 400);
+  await assert.rejects(store.reorderColumn('done', 'not-a-list'), (e) => e.status === 400);
 });
 
 test('ids are validated against path traversal', async () => {
