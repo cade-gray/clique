@@ -1,5 +1,5 @@
 ---
-title: Welcome to the tracker
+title: Welcome to Clique
 status: in-progress
 order: 0
 created: 2026-10-16T01:00:12.321Z

@@ -1,7 +1,7 @@
 {
-  "name": "project-tracker",
+  "name": "clique",
   "version": "1.0.0",
-  "description": "Kanban project tracker with Notion-style markdown pages, stored as markdown files on disk",
+  "description": "Kanban board for dev teams with Notion-style markdown pages, stored as markdown files on disk",
   "scripts": {
     "dev": "concurrently -k -n api,web \"node --watch server/index.js\" \"vite\"",
     "build": "vite build",

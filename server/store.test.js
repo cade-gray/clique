@@ -6,7 +6,7 @@ import path from 'node:path';
 import { Store, parseMarkdown, stringifyMarkdown } from './store.js';
 
 async function freshStore() {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'clique-'));
   const store = new Store(dir);
   await store.init();
   return store;

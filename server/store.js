@@ -148,7 +148,7 @@ export class Store {
 
   // A first-run example so a fresh install shows what a project looks like.
   async seed() {
-    const p = await this.createProject({ title: 'Welcome to the tracker', status: 'in-progress' });
+    const p = await this.createProject({ title: 'Welcome to Clique', status: 'in-progress' });
     await this.updateProject(p.id, {
       properties: { priority: 'Medium' },
       subtasks: [

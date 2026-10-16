@@ -72,7 +72,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <a className="brand" href="#/">
-          Project Tracker
+          Clique
         </a>
         <nav>
           <a href="#/" className={route.view === 'board' ? 'active' : ''}>
