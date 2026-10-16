@@ -3,7 +3,7 @@ title: Welcome to Clique
 status: in-progress
 order: 0
 created: 2026-10-16T01:00:12.321Z
-updated: 2026-10-16T01:00:22.925Z
+updated: 2026-10-16T03:54:16.394Z
 subtasks:
   - text: Open this project
     done: true

@@ -3,4 +3,6 @@ dist/
 data/.trash/
 iisnode/
 *.tmp
-logs/
+# keep the empty logs folder so IIS (HttpPlatformHandler) has somewhere to write node.log
+logs/*
+!logs/.gitkeep

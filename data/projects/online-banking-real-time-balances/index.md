@@ -1,7 +1,7 @@
 ---
 title: Online banking real-time balances
 status: review
-order: 0
+order: 1
 created: 2026-10-16T02:32:36.255Z
 updated: 2026-10-16T02:32:36.257Z
 subtasks:

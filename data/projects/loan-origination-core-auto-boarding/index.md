@@ -1,7 +1,7 @@
 ---
 title: Loan origination → core auto-boarding
 status: in-progress
-order: 2
+order: 1
 created: 2026-10-16T02:32:36.269Z
 updated: 2026-10-16T02:32:36.271Z
 subtasks:

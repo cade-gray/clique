@@ -9,6 +9,7 @@ import { PEOPLE_LIST_ID, PropertyInput, toPeople } from './props.jsx';
 export default function ProjectView({ id, pageId, workspace }) {
   const [project, setProject] = useState(null);
   const [error, setError] = useState(null);
+  const [saveError, setSaveError] = useState(null);
 
   const load = useCallback(
     () =>
@@ -32,8 +33,15 @@ export default function ProjectView({ id, pageId, workspace }) {
       ...fields,
       properties: fields.properties ? { ...p.properties, ...fields.properties } : p.properties,
     }));
-    const { body: _b, version: _v, ...meta } = await api.updateProject(id, fields);
-    setProject((p) => ({ ...p, ...meta }));
+    try {
+      const { body: _b, version: _v, ...meta } = await api.updateProject(id, fields);
+      setProject((p) => ({ ...p, ...meta }));
+      setSaveError(null);
+    } catch (e) {
+      // Say so and reload, so the page never shows a change the server didn't keep.
+      setSaveError(`That change was not saved: ${e.message}`);
+      load();
+    }
   }
 
   async function addPage() {
@@ -81,6 +89,12 @@ export default function ProjectView({ id, pageId, workspace }) {
       </aside>
 
       <div className="doc">
+        {saveError && (
+          <div className="banner error doc-banner">
+            {saveError}
+            <button onClick={() => setSaveError(null)}>Dismiss</button>
+          </div>
+        )}
         {pageId ? (
           <PageView key={pageId} projectId={id} pageId={pageId} onChanged={load} />
         ) : (

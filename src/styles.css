@@ -71,6 +71,7 @@ main { flex: 1; min-height: 0; }
 .banner { margin: 12px 20px; padding: 10px 14px; border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .banner.error { background: var(--danger-bg); color: var(--danger); }
 .banner.warn { background: var(--warn-bg); margin: 0 0 12px; }
+.banner.doc-banner { margin: 0 0 16px; }
 .banner button { border: 1px solid var(--border); background: var(--input-bg); color: var(--text); border-radius: 6px; padding: 3px 10px; }
 .loading { padding: 40px; color: var(--muted); }
 
@@ -103,7 +104,7 @@ main { flex: 1; min-height: 0; }
 .card-prop-value { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .card-props:empty { display: none; }
 .prop-inline { color: var(--text); }
-.card-update { margin: 0 0 8px; padding: 6px 8px; background: var(--hover); border-radius: 6px; font-size: 12px; }
+.card-update { margin: 8px 0; padding: 6px 8px; background: var(--hover); border-radius: 6px; font-size: 12px; }
 .card-update-text { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; word-break: break-word; }
 .card-update-meta { margin-top: 3px; color: var(--muted); font-size: 11px; }
 .card-progress { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--muted); }
