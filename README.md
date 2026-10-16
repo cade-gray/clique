@@ -1,4 +1,4 @@
-# Project Tracker
+# Clique
 
 A Kanban board of projects where each project opens into Notion-style pages: markdown that renders as you type, code blocks with a copy button, subtasks, and properties defined once for every project.
 
@@ -25,7 +25,7 @@ npm test           # storage tests
 
 `DATA_DIR` (default `./data`) holds everything. The repo ships with a starter workspace and an example project in `data/`, so a fresh clone opens to a working board. (If `workspace.yaml` is ever missing, the app recreates the defaults and the example.) The `data/.trash/` folder is git-ignored.
 
-The tracker is built for one board shared by one team. To keep your team's real data in git, commit `data/` and use normal pull/push to share it; to keep it out of the repo, point `DATA_DIR` somewhere else.
+Clique is built for one board shared by one team. To keep your team's real data in git, commit `data/` and use normal pull/push to share it; to keep it out of the repo, point `DATA_DIR` somewhere else.
 
 ```
 data/
@@ -81,7 +81,7 @@ Property, status and subtask changes save immediately and merge per field. Page 
 2. Copy the repo (with `node_modules` and a built `dist/`) to the site folder, or run `npm ci && npm run build` there.
 3. Point an IIS site or application at the folder. Check `processPath` in `web.config` matches where `node.exe` is installed.
 4. Give the app pool identity modify rights on the `data` folder (or set `DATA_DIR` to another location) and on `logs`.
-5. If the app sits in a virtual directory such as `/tracker`, set `BASE_PATH` to `/tracker` in `web.config`. The frontend uses relative URLs and hash routes, so no URL Rewrite rules are needed.
+5. If the app sits in a virtual directory such as `/clique`, set `BASE_PATH` to `/clique` in `web.config`. The frontend uses relative URLs and hash routes, so no URL Rewrite rules are needed.
 
 ### Windows authentication (later)
 

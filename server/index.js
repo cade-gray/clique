@@ -34,7 +34,7 @@ api.use((err, req, res, _next) => {
   res.status(500).json({ error: 'Internal error' });
 });
 
-// BASE_PATH is the IIS virtual directory (e.g. /tracker) when not hosted at the site root.
+// BASE_PATH is the IIS virtual directory (e.g. /clique) when not hosted at the site root.
 const base = (process.env.BASE_PATH || '').replace(/\/+$/, '');
 app.use(`${base}/api`, api);
 app.use(base || '/', express.static(path.join(root, 'dist')));
@@ -42,5 +42,5 @@ app.use(base || '/', express.static(path.join(root, 'dist')));
 // Under IIS, HttpPlatformHandler passes the port in HTTP_PLATFORM_PORT.
 const port = process.env.HTTP_PLATFORM_PORT || process.env.PORT || 3001;
 store.init().then(() => {
-  app.listen(port, () => console.log(`Project tracker listening on ${port}, data in ${store.dir}`));
+  app.listen(port, () => console.log(`Clique listening on ${port}, data in ${store.dir}`));
 });
