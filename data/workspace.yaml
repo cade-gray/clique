@@ -1,0 +1,43 @@
+columns:
+  - id: backlog
+    name: Backlog
+  - id: in-progress
+    name: In progress
+  - id: review
+    name: In review
+  - id: done
+    name: Done
+properties:
+  - key: priority
+    name: Priority
+    type: select
+    options:
+      - value: High
+        color: red
+      - value: Medium
+        color: yellow
+      - value: Low
+        color: gray
+  - key: owner
+    name: Owners
+    type: people
+  - key: due
+    name: Due
+    type: date
+  - key: labels
+    name: Labels
+    type: multi_select
+    options:
+      - value: Frontend
+        color: blue
+      - value: Backend
+        color: purple
+      - value: Design
+        color: pink
+      - value: Bug
+        color: red
+      - value: Docs
+        color: green
+  - key: link
+    name: Repo
+    type: url

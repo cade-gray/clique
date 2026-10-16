@@ -23,7 +23,9 @@ npm test           # storage tests
 
 ## Where the data lives
 
-`DATA_DIR` (default `./data`) holds everything. On first run it creates a workspace and an example project.
+`DATA_DIR` (default `./data`) holds everything. The repo ships with a starter workspace and an example project in `data/`, so a fresh clone opens to a working board. (If `workspace.yaml` is ever missing, the app recreates the defaults and the example.) The `data/.trash/` folder is git-ignored.
+
+The tracker is built for one board shared by one team. To keep your team's real data in git, commit `data/` and use normal pull/push to share it; to keep it out of the repo, point `DATA_DIR` somewhere else.
 
 ```
 data/
@@ -45,8 +47,11 @@ order: 0                     # position within the column
 subtasks:
   - text: Draft wireframes
     done: true
+    owners: [Sam]            # optional, any number per subtask
 priority: High               # global properties are flat frontmatter keys
-owner: Cade
+owner:                       # a "people" property: any number of names
+  - Cade
+  - Sam
 ---
 
 ## Goals
@@ -64,8 +69,9 @@ Property, status and subtask changes save immediately and merge per field. Page 
 - **Board**: columns are statuses; drag cards between and within columns; filter by title; card shows properties and subtask progress.
 - **Project pages**: an overview plus any number of sub-pages from the sidebar.
 - **Editor** ([Milkdown Crepe](https://milkdown.dev)): live markdown, `/` menu for headings, lists, task lists, tables, quotes, code blocks (syntax highlighting, language picker, copy button), images and math.
-- **Subtasks**: check off, edit inline, drag to reorder.
-- **Global properties** (Properties & columns screen): text, number, select, multi-select, date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
+- **Blocked**: tick Blocked on a project to outline its card in red; an optional reason shows on the card (`blocked` / `blockedReason` in the frontmatter).
+- **Subtasks**: check off, edit inline, drag to reorder, assign multiple owners.
+- **Global properties** (Properties & columns screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
 
 ## Hosting on IIS
 

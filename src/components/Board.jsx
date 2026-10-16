@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { navigate } from '../App.jsx';
-import { PropertyValue } from './props.jsx';
+import { PropertyValue, isEmpty } from './props.jsx';
 
 const POLL_MS = 10000;
 
@@ -25,20 +25,18 @@ export default function Board({ workspace }) {
   }, [load]);
 
   const columns = useMemo(() => {
-    const known = new Set(workspace.columns.map((c) => c.id));
     const cols = workspace.columns.map((c) => ({ ...c, items: [] }));
-    const orphans = { id: '__none', name: 'No status', items: [], orphan: true };
     const q = query.trim().toLowerCase();
     for (const p of projects ?? []) {
       if (q && !p.title.toLowerCase().includes(q)) continue;
-      (known.has(p.status) ? cols.find((c) => c.id === p.status) : orphans).items.push(p);
+      cols.find((c) => c.id === p.status)?.items.push(p);
     }
     for (const c of cols) c.items.sort((a, b) => a.order - b.order);
-    return orphans.items.length ? [...cols, orphans] : cols;
+    return cols;
   }, [workspace.columns, projects, query]);
 
   async function drop(status) {
-    if (!drag?.over || status === '__none') return setDrag(null);
+    if (!drag?.over) return setDrag(null);
     const col = columns.find((c) => c.id === status);
     const ids = col.items.map((p) => p.id).filter((id) => id !== drag.id);
     // When reordering inside the same column, the dragged card's old slot shifts the index.
@@ -83,7 +81,7 @@ export default function Board({ workspace }) {
             key={col.id}
             className={`column ${drag?.over?.status === col.id ? 'drag-over' : ''}`}
             onDragOver={(e) => {
-              if (!drag || col.orphan) return;
+              if (!drag) return;
               e.preventDefault();
               // Dropping on empty space in a column appends to the end.
               if (e.target === e.currentTarget || e.target.classList.contains('cards'))
@@ -109,21 +107,19 @@ export default function Board({ workspace }) {
                   onDragStart={() => setDrag({ id: p.id, over: null })}
                   onDragEnd={() => setDrag(null)}
                   onDragOverCard={(after) => {
-                    if (col.orphan) return;
                     setDrag((d) => d && { ...d, over: { status: col.id, index: after ? i + 1 : i } });
                   }}
                 />
               ))}
               {drag?.over?.status === col.id && drag.over.index === col.items.length && <div className="drop-marker" />}
             </div>
-            {!col.orphan &&
-              (adding === col.id ? (
-                <NewCardInput onDone={(title) => create(col.id, title)} />
-              ) : (
-                <button className="add-card" onClick={() => setAdding(col.id)}>
-                  + New project
-                </button>
-              ))}
+            {adding === col.id ? (
+              <NewCardInput onDone={(title) => create(col.id, title)} />
+            ) : (
+              <button className="add-card" onClick={() => setAdding(col.id)}>
+                + New project
+              </button>
+            )}
           </section>
         ))}
       </div>
@@ -137,7 +133,7 @@ function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd
     <>
       {dropBefore && <div className="drop-marker" />}
       <a
-        className={`card ${dragging ? 'dragging' : ''}`}
+        className={`card ${project.blocked ? 'blocked' : ''} ${dragging ? 'dragging' : ''}`}
         href={`#/p/${encodeURIComponent(project.id)}`}
         draggable
         onDragStart={(e) => {
@@ -153,10 +149,23 @@ function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd
         }}
       >
         <div className="card-title">{project.title}</div>
+        {project.blocked && (
+          <div className="card-blocked">
+            <strong>⛔ Blocked</strong>
+            {project.blockedReason && <span>: {project.blockedReason}</span>}
+          </div>
+        )}
         <div className="card-props">
-          {workspace.properties.map((def) => (
-            <PropertyValue key={def.key} def={def} value={project.properties[def.key]} />
-          ))}
+          {workspace.properties
+            .filter((def) => !isEmpty(project.properties[def.key]) && project.properties[def.key] !== false)
+            .map((def) => (
+              <div className="card-prop" key={def.key}>
+                <span className="card-prop-label">{def.name}</span>
+                <span className="card-prop-value">
+                  <PropertyValue def={def} value={project.properties[def.key]} showLabel={false} />
+                </span>
+              </div>
+            ))}
         </div>
         {subtasks.total > 0 && (
           <div className="card-progress" title={`${subtasks.done} of ${subtasks.total} subtasks done`}>

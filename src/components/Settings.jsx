@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { api } from '../api.js';
 import { COLORS, TYPE_LABELS, Tag } from './props.jsx';
 
-const RESERVED = ['title', 'status', 'order', 'subtasks', 'created', 'updated'];
+const RESERVED = ['title', 'status', 'order', 'subtasks', 'blocked', 'blockedReason', 'created', 'updated'];
 
 function slugify(s) {
   return (
@@ -65,7 +65,7 @@ export default function Settings({ workspace, onSaved }) {
 
       <section>
         <h3>Board columns</h3>
-        <p className="muted small">Each column is a project status. Removing a column moves its projects to "No status".</p>
+        <p className="muted small">Each column is a project status. Removing a column moves its projects to Backlog (or the first column if there is no Backlog).</p>
         {columns.map((c, i) => (
           <div className="settings-row" key={c.id}>
             <input value={c.name} onChange={(e) => setCol(i, { name: e.target.value })} />

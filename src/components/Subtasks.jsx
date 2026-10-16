@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PeopleInput } from './props.jsx';
 
 export default function Subtasks({ items, onChange }) {
   const [dragIndex, setDragIndex] = useState(null);
@@ -58,6 +59,11 @@ export default function Subtasks({ items, onChange }) {
                 else if (v !== s.text) update(i, { text: v });
               }}
               onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+            />
+            <PeopleInput
+              value={s.owners}
+              placeholder="+ Owner"
+              onChange={(owners) => update(i, { owners: owners.length ? owners : undefined })}
             />
             <button className="icon" onClick={() => remove(i)} title="Delete subtask">
               ×

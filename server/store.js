@@ -12,7 +12,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import YAML from 'yaml';
 
-export const RESERVED_KEYS = ['title', 'status', 'order', 'subtasks', 'created', 'updated'];
+export const RESERVED_KEYS = ['title', 'status', 'order', 'subtasks', 'blocked', 'blockedReason', 'created', 'updated'];
 
 const DEFAULT_WORKSPACE = {
   columns: [
@@ -31,10 +31,15 @@ const DEFAULT_WORKSPACE = {
         { value: 'Low', color: 'gray' },
       ],
     },
-    { key: 'owner', name: 'Owner', type: 'text' },
+    { key: 'owner', name: 'Owners', type: 'people' },
     { key: 'due', name: 'Due', type: 'date' },
   ],
 };
+
+// Every project has a status: the "backlog" column if there is one, otherwise the first column.
+export function defaultStatus(ws) {
+  return (ws.columns.find((c) => c.id === 'backlog') ?? ws.columns[0])?.id ?? null;
+}
 
 export class HttpError extends Error {
   constructor(status, message, extra) {
@@ -177,7 +182,8 @@ export class Store {
     const ws = YAML.parse(await fs.readFile(this.workspaceFile, 'utf8')) ?? {};
     return {
       columns: Array.isArray(ws.columns) ? ws.columns : [],
-      properties: Array.isArray(ws.properties) ? ws.properties : [],
+      // `blocked` is built in now; drop an older custom property that used the same key.
+      properties: (Array.isArray(ws.properties) ? ws.properties : []).filter((p) => !RESERVED_KEYS.includes(p.key)),
     };
   }
 
@@ -190,7 +196,7 @@ export class Store {
     if (new Set(columns.map((c) => c.id)).size !== columns.length)
       throw new HttpError(400, 'Column ids must be unique');
 
-    const TYPES = ['text', 'number', 'select', 'multi_select', 'date', 'checkbox', 'url'];
+    const TYPES = ['text', 'number', 'select', 'multi_select', 'people', 'date', 'checkbox', 'url'];
     const properties = (input.properties ?? []).map((p) => {
       const key = assertId(p.key, 'property key');
       if (RESERVED_KEYS.includes(key)) throw new HttpError(400, `"${key}" is a reserved property key`);
@@ -252,16 +258,19 @@ export class Store {
     return pages.sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
   }
 
-  toSummary(id, data) {
+  // A missing or unknown status (e.g. a deleted column) falls back to the default column.
+  toSummary(id, data, ws) {
     const subtasks = normalizeSubtasks(data.subtasks);
     const props = {};
     for (const [k, v] of Object.entries(data)) if (!RESERVED_KEYS.includes(k)) props[k] = v;
     return {
       id,
       title: data.title || id,
-      status: data.status ?? null,
+      status: ws.columns.some((c) => c.id === data.status) ? data.status : defaultStatus(ws),
       order: Number(data.order) || 0,
       properties: props,
+      blocked: data.blocked === true,
+      blockedReason: data.blocked === true ? String(data.blockedReason ?? '') : '',
       subtasks: { done: subtasks.filter((s) => s.done).length, total: subtasks.length },
       created: data.created ?? null,
       updated: data.updated ?? null,
@@ -269,6 +278,7 @@ export class Store {
   }
 
   async listProjects() {
+    const ws = await this.getWorkspace();
     const entries = await fs.readdir(this.projectsDir, { withFileTypes: true });
     const out = [];
     for (const e of entries) {
@@ -276,7 +286,7 @@ export class Store {
       const file = path.join(this.projectsDir, e.name, 'index.md');
       if (!(await exists(file))) continue;
       const { data } = parseMarkdown(await fs.readFile(file, 'utf8'));
-      out.push(this.toSummary(e.name, data));
+      out.push(this.toSummary(e.name, data, ws));
     }
     return out.sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
   }
@@ -284,7 +294,7 @@ export class Store {
   async getProject(id) {
     const doc = await this.readDoc(this.projectFile(id));
     return {
-      ...this.toSummary(id, doc.data),
+      ...this.toSummary(id, doc.data, await this.getWorkspace()),
       subtasks: normalizeSubtasks(doc.data.subtasks),
       body: doc.body,
       version: doc.version,
@@ -301,7 +311,7 @@ export class Store {
   async createProject({ title, status }) {
     title = String(title ?? '').trim() || 'Untitled project';
     const ws = await this.getWorkspace();
-    if (!status || !ws.columns.some((c) => c.id === status)) status = ws.columns[0]?.id;
+    if (!ws.columns.some((c) => c.id === status)) status = defaultStatus(ws);
     const id = await this.uniqueId(this.projectsDir, slugify(title));
     const siblings = (await this.listProjects()).filter((p) => p.status === status);
     const order = siblings.length ? Math.max(...siblings.map((p) => p.order)) + 1 : 0;
@@ -327,15 +337,32 @@ export class Store {
         });
       }
       const data = { ...doc.data };
+      const ws = await this.getWorkspace();
       if (patch.title !== undefined) data.title = String(patch.title).trim() || 'Untitled project';
-      if (patch.status !== undefined) data.status = patch.status;
+      if (patch.status !== undefined) {
+        if (!ws.columns.some((c) => c.id === patch.status)) throw new HttpError(400, 'Unknown status');
+        data.status = patch.status;
+      }
       if (patch.order !== undefined) data.order = Number(patch.order) || 0;
+      if (patch.blocked !== undefined) {
+        if (patch.blocked) data.blocked = true;
+        else {
+          delete data.blocked;
+          delete data.blockedReason;
+        }
+      }
+      if (patch.blockedReason !== undefined) {
+        const reason = String(patch.blockedReason).trim().slice(0, 500);
+        if (reason && data.blocked === true) data.blockedReason = reason;
+        else delete data.blockedReason;
+      }
       if (patch.subtasks !== undefined) data.subtasks = normalizeSubtasks(patch.subtasks);
       if (patch.properties) {
         for (const [k, v] of Object.entries(patch.properties)) {
           if (RESERVED_KEYS.includes(k) || !ID_RE.test(k)) continue;
-          if (v === null || v === '' || (Array.isArray(v) && v.length === 0)) delete data[k];
-          else data[k] = v;
+          const val = Array.isArray(v) && ws.properties.find((d) => d.key === k)?.type === 'people' ? normalizePeople(v) : v;
+          if (val === null || val === '' || (Array.isArray(val) && val.length === 0)) delete data[k];
+          else data[k] = val;
         }
       }
       data.updated = now();
@@ -418,5 +445,25 @@ function normalizeSubtasks(list) {
   return list
     .map((s) => (typeof s === 'string' ? { text: s, done: false } : s))
     .filter((s) => s && typeof s === 'object')
-    .map((s) => ({ text: String(s.text ?? '').slice(0, 500), done: Boolean(s.done) }));
+    .map((s) => {
+      const out = { text: String(s.text ?? '').slice(0, 500), done: Boolean(s.done) };
+      const owners = normalizePeople(s.owners);
+      if (owners.length) out.owners = owners;
+      return out;
+    });
+}
+
+// Owners are free-text names; trim, drop blanks and case-insensitive duplicates.
+export function normalizePeople(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const n of list) {
+    const name = String(n ?? '').trim().slice(0, 80);
+    if (name && !seen.has(name.toLowerCase())) {
+      seen.add(name.toLowerCase());
+      out.push(name);
+    }
+  }
+  return out;
 }

@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { navigate } from '../App.jsx';
 import DocBody from './DocBody.jsx';
 import Subtasks from './Subtasks.jsx';
-import { PropertyInput } from './props.jsx';
+import { PEOPLE_LIST_ID, PropertyInput, toPeople } from './props.jsx';
 
 export default function ProjectView({ id, pageId, workspace }) {
   const [project, setProject] = useState(null);
@@ -53,6 +53,9 @@ export default function ProjectView({ id, pageId, workspace }) {
   if (!project) return <div className="loading">Loading…</div>;
 
   const base = `#/p/${encodeURIComponent(id)}`;
+  const known = new Set();
+  for (const def of workspace.properties) if (def.type === 'people') toPeople(project.properties[def.key]).forEach((n) => known.add(n));
+  for (const s of project.subtasks) toPeople(s.owners).forEach((n) => known.add(n));
 
   return (
     <div className="project">
@@ -85,8 +88,7 @@ export default function ProjectView({ id, pageId, workspace }) {
             <div className="props">
               <div className="prop-row">
                 <label>Status</label>
-                <select value={project.status ?? ''} onChange={(e) => patch({ status: e.target.value })}>
-                  {!workspace.columns.some((c) => c.id === project.status) && <option value="">No status</option>}
+                <select value={project.status} onChange={(e) => patch({ status: e.target.value })}>
                   {workspace.columns.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -94,6 +96,20 @@ export default function ProjectView({ id, pageId, workspace }) {
                   ))}
                 </select>
               </div>
+              <div className="prop-row">
+                <label>Blocked</label>
+                <input
+                  type="checkbox"
+                  checked={project.blocked}
+                  onChange={(e) => patch({ blocked: e.target.checked, ...(e.target.checked ? {} : { blockedReason: '' }) })}
+                />
+              </div>
+              {project.blocked && (
+                <div className="prop-row">
+                  <label>Reason</label>
+                  <BlockedReason value={project.blockedReason} onCommit={(blockedReason) => patch({ blockedReason })} />
+                </div>
+              )}
               {workspace.properties.map((def) => (
                 <div className="prop-row" key={def.key}>
                   <label>{def.name}</label>
@@ -109,6 +125,11 @@ export default function ProjectView({ id, pageId, workspace }) {
               </a>
             </div>
 
+            <datalist id={PEOPLE_LIST_ID}>
+              {[...known].map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
             <Subtasks items={project.subtasks} onChange={(subtasks) => patch({ subtasks })} />
 
             <DocBody
@@ -169,6 +190,19 @@ function PageView({ projectId, pageId, onChanged }) {
         </button>
       </div>
     </>
+  );
+}
+
+function BlockedReason({ value, onCommit }) {
+  return (
+    <input
+      key={value}
+      className="blocked-reason"
+      defaultValue={value}
+      placeholder="Why is this blocked?"
+      onBlur={(e) => e.target.value.trim() !== value && onCommit(e.target.value.trim())}
+      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+    />
   );
 }
 
