@@ -16,6 +16,37 @@ function parseHash() {
   return { view: 'board' };
 }
 
+// Follows the system preference until the user picks a theme explicitly.
+function useTheme() {
+  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || 'light');
+  const apply = useCallback((next, persist) => {
+    document.documentElement.dataset.theme = next;
+    setTheme(next);
+    if (persist) {
+      try {
+        localStorage.setItem('theme', next);
+      } catch {
+        // storage unavailable; the choice just won't persist
+      }
+    }
+  }, []);
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (e) => {
+      let saved = null;
+      try {
+        saved = localStorage.getItem('theme');
+      } catch {
+        // ignore
+      }
+      if (!saved) apply(e.matches ? 'dark' : 'light', false);
+    };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [apply]);
+  return [theme, () => apply(theme === 'dark' ? 'light' : 'dark', true)];
+}
+
 export function navigate(hash) {
   window.location.hash = hash;
 }
@@ -24,6 +55,7 @@ export default function App() {
   const [route, setRoute] = useState(parseHash);
   const [workspace, setWorkspace] = useState(null);
   const [error, setError] = useState(null);
+  const [theme, toggleTheme] = useTheme();
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash());
@@ -50,6 +82,9 @@ export default function App() {
             Properties &amp; columns
           </a>
         </nav>
+        <button className="theme-toggle" onClick={toggleTheme} title="Switch between light and dark mode">
+          {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+        </button>
       </header>
       <main>
         {error && <div className="banner error">Could not reach the server: {error.message}</div>}
