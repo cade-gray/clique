@@ -23,7 +23,7 @@ npm test           # storage tests
 
 ## Where the data lives
 
-`DATA_DIR` (default `./data`) holds everything. The repo ships with a starter workspace and an example project in `data/`, so a fresh clone opens to a working board. (If `workspace.yaml` is ever missing, the app recreates the defaults and the example.) The `data/.trash/` folder is git-ignored.
+`DATA_DIR` (default `./data`) holds everything. The repo ships with a starter workspace in `data/` with a welcome project plus example projects for a credit union integrations team (each project is a built integration, such as an ITSM ↔ core banking incident sync), so a fresh clone opens to a working board. (If `workspace.yaml` is ever missing, the app recreates the defaults and the example.) The `data/.trash/` folder is git-ignored.
 
 Clique is built for one board shared by one team. To keep your team's real data in git, commit `data/` and use normal pull/push to share it; to keep it out of the repo, point `DATA_DIR` somewhere else.
 
@@ -66,7 +66,8 @@ Property, status and subtask changes save immediately and merge per field. Page 
 
 ## Features
 
-- **Board**: columns are statuses; drag cards between and within columns; filter by title; card shows properties and subtask progress.
+- **List view**: every project in a sortable table (status, blocked + reason, each property, subtask progress, last updated) with filters, and each project's subtasks (with owners) listed beneath it (toggle "Show subtasks"). **Export CSV** downloads exactly what is shown (opens in Excel/Sheets); with subtasks on, there is one row per subtask that repeats the project columns, so it can be filtered or pivoted, and **Print / PDF** gives a clean light-themed report for management.
+- **Board view**: columns are statuses; drag cards between and within columns; filter by title; card shows properties and subtask progress.
 - **Project pages**: an overview plus any number of sub-pages from the sidebar.
 - **Editor** ([Milkdown Crepe](https://milkdown.dev)): live markdown, `/` menu for headings, lists, task lists, tables, quotes, code blocks (syntax highlighting, language picker, copy button), images and math.
 - **Blocked**: tick Blocked on a project to outline its card in red; an optional reason shows on the card (`blocked` / `blockedReason` in the frontmatter).

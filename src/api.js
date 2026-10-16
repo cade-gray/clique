@@ -21,7 +21,7 @@ export const api = {
   workspace: () => request('GET', 'workspace'),
   saveWorkspace: (ws) => request('PUT', 'workspace', ws),
 
-  projects: () => request('GET', 'projects'),
+  projects: ({ subtasks = false } = {}) => request('GET', subtasks ? 'projects?include=subtasks' : 'projects'),
   project: (id) => request('GET', `projects/${enc(id)}`),
   createProject: (input) => request('POST', 'projects', input),
   updateProject: (id, patch) => request('PATCH', `projects/${enc(id)}`, patch),
