@@ -29,6 +29,11 @@ systems:
 pattern: Webhook / events
 estimate: 18
 summary: New members are verified and created in core and the CRM from one application.
+updates:
+  - id: f6070801
+    text: Compliance wants to review the data flow before we pick a vendor. Draft going to them next week.
+    at: 2026-10-06T15:00:00.000Z
+    author: Priya
 ---
 
 ## Scope

@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
-import { PropertyValue, Tag, formatDate, isEmpty, toPeople } from './props.jsx';
+import { PropertyValue, Tag, formatDate, formatDateTime, isEmpty, timeAgo, toPeople } from './props.jsx';
 
 const POLL_MS = 10000;
 
@@ -72,9 +72,16 @@ export default function ListView({ workspace }) {
       })),
       {
         id: 'subtasks',
-        label: 'Subtasks',
+        label: 'To-dos',
         sort: progress,
         text: (p) => (p.subtasks.total ? `${p.subtasks.done}/${p.subtasks.total}` : ''),
+      },
+      {
+        id: 'latest',
+        label: 'Latest update',
+        sort: (p) => p.latestUpdate?.at ?? '',
+        text: (p) => p.latestUpdate?.text ?? '',
+        extra: (p) => [p.latestUpdate?.author ?? '', p.latestUpdate?.at?.slice(0, 10) ?? ''],
       },
       { id: 'updated', label: 'Updated', sort: (p) => p.updated ?? '', text: (p) => (p.updated ?? '').slice(0, 10) },
     ],
@@ -107,9 +114,10 @@ export default function ListView({ workspace }) {
     for (const c of columns) {
       header.push(c.label);
       if (c.reason) header.push('Blocked reason');
-      if (c.id === 'subtasks') header.push('Subtasks done', 'Subtasks total', 'Progress');
+      if (c.id === 'subtasks') header.push('To-dos done', 'To-dos total', 'Progress');
+      if (c.extra) header.push('Latest update by', 'Latest update date');
     }
-    if (showSubtasks) header.push('Subtask', 'Subtask status', 'Subtask owners');
+    if (showSubtasks) header.push('To-do', 'To-do status', 'To-do owners');
     const lines = [header.map((h) => csvCell(h, false))];
     for (const p of rows) {
       const cells = [];
@@ -117,13 +125,14 @@ export default function ListView({ workspace }) {
         const numeric = c.def?.type === 'number' || c.def?.type === 'date' || c.id === 'updated';
         cells.push(csvCell(c.text(p), !numeric));
         if (c.reason) cells.push(csvCell(c.reason(p)));
+        if (c.extra) cells.push(...c.extra(p).map((v) => csvCell(v)));
         if (c.id === 'subtasks') {
           const pr = progress(p);
           cells.push(p.subtasks.done, p.subtasks.total, pr === null ? '' : `${Math.round(pr * 100)}%`);
         }
       }
-      // With subtasks on, each subtask gets its own row that repeats the project columns,
-      // so the file can be filtered and pivoted by project. A project without subtasks is one row.
+      // With to-dos on, each to-do gets its own row that repeats the project columns,
+      // so the file can be filtered and pivoted by project. A project without to-dos is one row.
       const items = showSubtasks ? p.subtasks.items ?? [] : [];
       if (!showSubtasks) lines.push(cells);
       else if (items.length === 0) lines.push([...cells, '', '', '']);
@@ -155,7 +164,7 @@ export default function ListView({ workspace }) {
           <input type="checkbox" checked={blockedOnly} onChange={(e) => setBlockedOnly(e.target.checked)} /> Blocked only
         </label>
         <label className="check">
-          <input type="checkbox" checked={showSubtasks} onChange={(e) => setShowSubtasks(e.target.checked)} /> Show subtasks
+          <input type="checkbox" checked={showSubtasks} onChange={(e) => setShowSubtasks(e.target.checked)} /> Show to-dos
         </label>
         <span className="muted">
           {rows.length === projects.length ? `${projects.length} projects` : `${rows.length} of ${projects.length} projects`}
@@ -248,6 +257,16 @@ function Cell({ c, p, columns }) {
         <span>
           {done}/{total}
         </span>
+      </div>
+    );
+  }
+  if (c.id === 'latest') {
+    const u = p.latestUpdate;
+    if (!u) return null;
+    return (
+      <div className="latest-update" title={formatDateTime(u.at)}>
+        <div>{u.text}</div>
+        <div className="muted small">{[u.author, timeAgo(u.at)].filter(Boolean).join(' · ')}</div>
       </div>
     );
   }

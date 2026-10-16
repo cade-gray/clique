@@ -19,6 +19,8 @@ api.get('/projects', h((req) => store.listProjects({ withSubtasks: req.query.inc
 api.post('/projects', h((req) => store.createProject(req.body)));
 api.get('/projects/:id', h((req) => store.getProject(req.params.id)));
 api.patch('/projects/:id', h((req) => store.updateProject(req.params.id, req.body)));
+api.post('/projects/:id/updates', h((req) => store.addUpdate(req.params.id, req.body ?? {})));
+api.delete('/projects/:id/updates/:uid', h((req) => store.deleteUpdate(req.params.id, req.params.uid)));
 api.delete('/projects/:id', h((req) => store.deleteProject(req.params.id)));
 api.post('/board/reorder', h((req) => store.reorderColumn(req.body.status, req.body.ids ?? [])));
 

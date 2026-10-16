@@ -1,6 +1,6 @@
 # Clique
 
-A Kanban board of projects where each project opens into Notion-style pages: markdown that renders as you type, code blocks with a copy button, subtasks, and properties defined once for every project.
+A Kanban board of projects where each project opens into Notion-style pages: markdown that renders as you type, code blocks with a copy button, to-dos, and properties defined once for every project.
 
 Everything is stored as plain markdown files on disk (Obsidian-style). There is no database and no login yet; everyone who can reach the site edits the same board.
 
@@ -47,7 +47,7 @@ order: 0                     # position within the column
 subtasks:
   - text: Draft wireframes
     done: true
-    owners: [Sam]            # optional, any number per subtask
+    owners: [Sam]            # optional, any number per to-do
 priority: High               # global properties are flat frontmatter keys
 owner:                       # a "people" property: any number of names
   - Cade
@@ -62,16 +62,17 @@ The folder can be opened as an Obsidian vault, edited by hand, backed up, or put
 
 ### Shared editing
 
-Property, status and subtask changes save immediately and merge per field. Page bodies autosave after a short pause; if someone else saved the same page in the meantime, the editor shows a banner to load their version or overwrite with yours instead of silently clobbering it.
+Property, status and to-do changes save immediately and merge per field. Page bodies autosave after a short pause; if someone else saved the same page in the meantime, the editor shows a banner to load their version or overwrite with yours instead of silently clobbering it.
 
 ## Features
 
-- **List view**: every project in a sortable table (status, blocked + reason, each property, subtask progress, last updated) with filters, and each project's subtasks (with owners) listed beneath it (toggle "Show subtasks"). **Export CSV** downloads exactly what is shown (opens in Excel/Sheets); with subtasks on, there is one row per subtask that repeats the project columns, so it can be filtered or pivoted, and **Print / PDF** gives a clean light-themed report for management.
-- **Board view**: columns are statuses; drag cards between and within columns; filter by title; card shows properties and subtask progress.
+- **List view**: every project in a sortable table (status, blocked + reason, each property, to-do progress, last updated) with filters, and each project's to-dos (with owners) listed beneath it (toggle "Show to-dos"). **Export CSV** downloads exactly what is shown (opens in Excel/Sheets); with to-dos on, there is one row per to-do that repeats the project columns, so it can be filtered or pivoted, and **Print / PDF** gives a clean light-themed report for management.
+- **Board view**: columns are statuses; drag cards between and within columns; filter by title; card shows properties and to-do progress.
 - **Project pages**: an overview plus any number of sub-pages from the sidebar.
 - **Editor** ([Milkdown Crepe](https://milkdown.dev)): live markdown, `/` menu for headings, lists, task lists, tables, quotes, code blocks (syntax highlighting, language picker, copy button), images and math.
+- **Status updates**: a comment-style timeline on each project (`updates` in the frontmatter, newest first, with an optional name). The latest update shows on the board card and in the list view and CSV.
 - **Blocked**: tick Blocked on a project to outline its card in red; an optional reason shows on the card (`blocked` / `blockedReason` in the frontmatter).
-- **Subtasks**: check off, edit inline, drag to reorder, assign multiple owners.
+- **To-dos**: check off, edit inline, drag to reorder, assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.)
 - **Global properties** (Properties & columns screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
 
 ## Hosting on IIS

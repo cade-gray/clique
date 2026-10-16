@@ -34,6 +34,11 @@ pattern: SFTP file feed
 estimate: 10
 link: https://example.com/runbooks/card-recon
 summary: Settlement files from the card processor are matched to core postings every night.
+updates:
+  - id: b2c3d401
+    text: Shipped. First exception report went to Accounting with 3 items, all explained.
+    at: 2026-07-31T13:00:00.000Z
+    author: Jordan
 ---
 
 ## Schedule

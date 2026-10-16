@@ -1,7 +1,7 @@
 // Markdown-on-disk storage. Layout under DATA_DIR:
 //
 //   workspace.yaml              board columns + globally defined properties
-//   projects/<id>/index.md      the project: frontmatter (status, properties, subtasks) + overview body
+//   projects/<id>/index.md      the project: frontmatter (status, properties, to-dos, updates) + overview body
 //   projects/<id>/<page>.md     extra pages inside the project
 //   .trash/                     deleted projects and pages land here instead of being removed
 //
@@ -9,10 +9,10 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import YAML from 'yaml';
 
-export const RESERVED_KEYS = ['title', 'status', 'order', 'subtasks', 'blocked', 'blockedReason', 'created', 'updated'];
+export const RESERVED_KEYS = ['title', 'status', 'order', 'subtasks', 'blocked', 'blockedReason', 'updates', 'created', 'updated'];
 
 const DEFAULT_WORKSPACE = {
   columns: [
@@ -160,7 +160,7 @@ export class Store {
         '## What is this?',
         '',
         'Each card on the board is a folder of **markdown files** on the server. This overview is `index.md`;',
-        'pages you add in the sidebar are sibling `.md` files. Properties and subtasks live in the frontmatter.',
+        'pages you add in the sidebar are sibling `.md` files. Properties and to-dos live in the frontmatter.',
         '',
         'Type `/` on an empty line for headings, lists, tables, and code blocks.',
         '',
@@ -231,7 +231,7 @@ export class Store {
     return path.join(this.projectDir(id), `${page}.md`);
   }
 
-  // `version` is a hash of the body only, so editing properties or subtasks never
+  // `version` is a hash of the body only, so editing properties or to-dos never
   // makes someone's in-progress body edit look like a conflict.
   async readDoc(file) {
     let text;
@@ -261,6 +261,7 @@ export class Store {
   // A missing or unknown status (e.g. a deleted column) falls back to the default column.
   toSummary(id, data, ws) {
     const subtasks = normalizeSubtasks(data.subtasks);
+    const updates = normalizeUpdates(data.updates);
     const props = {};
     for (const [k, v] of Object.entries(data)) if (!RESERVED_KEYS.includes(k)) props[k] = v;
     return {
@@ -269,6 +270,8 @@ export class Store {
       status: ws.columns.some((c) => c.id === data.status) ? data.status : defaultStatus(ws),
       order: Number(data.order) || 0,
       properties: props,
+      latestUpdate: updates.length ? updates[updates.length - 1] : null,
+      updateCount: updates.length,
       blocked: data.blocked === true,
       blockedReason: data.blocked === true ? String(data.blockedReason ?? '') : '',
       subtasks: { done: subtasks.filter((s) => s.done).length, total: subtasks.length },
@@ -277,7 +280,7 @@ export class Store {
     };
   }
 
-  // `withSubtasks` adds the full subtask list to each summary (used by the list view and exports).
+  // `withSubtasks` adds the full to-do list to each summary (used by the list view and exports).
   async listProjects({ withSubtasks = false } = {}) {
     const ws = await this.getWorkspace();
     const entries = await fs.readdir(this.projectsDir, { withFileTypes: true });
@@ -299,6 +302,7 @@ export class Store {
     return {
       ...this.toSummary(id, doc.data, await this.getWorkspace()),
       subtasks: normalizeSubtasks(doc.data.subtasks),
+      updates: normalizeUpdates(doc.data.updates),
       body: doc.body,
       version: doc.version,
       pages: await this.listPages(id),
@@ -370,6 +374,36 @@ export class Store {
       }
       data.updated = now();
       await writeFileAtomic(file, stringifyMarkdown(data, patch.body ?? doc.body));
+    });
+    return this.getProject(id);
+  }
+
+  // ----- status updates (a comment-style timeline on each project) -----
+  // Appended under the file lock so two people posting at once never lose an entry.
+
+  async addUpdate(id, { text, author }) {
+    text = String(text ?? '').trim().slice(0, 2000);
+    if (!text) throw new HttpError(400, 'An update needs some text');
+    const file = this.projectFile(id);
+    await withLock(file, async () => {
+      const doc = await this.readDoc(file);
+      const entry = { id: randomUUID().slice(0, 8), text, at: now() };
+      const name = String(author ?? '').trim().slice(0, 80);
+      if (name) entry.author = name;
+      const data = { ...doc.data, updates: [...normalizeUpdates(doc.data.updates), entry], updated: now() };
+      await writeFileAtomic(file, stringifyMarkdown(data, doc.body));
+    });
+    return this.getProject(id);
+  }
+
+  async deleteUpdate(id, updateId) {
+    const file = this.projectFile(id);
+    await withLock(file, async () => {
+      const doc = await this.readDoc(file);
+      const updates = normalizeUpdates(doc.data.updates);
+      if (!updates.some((u) => u.id === updateId)) throw new HttpError(404, 'Update not found');
+      const data = { ...doc.data, updates: updates.filter((u) => u.id !== updateId), updated: now() };
+      await writeFileAtomic(file, stringifyMarkdown(data, doc.body));
     });
     return this.getProject(id);
   }
@@ -450,6 +484,9 @@ function normalizeSubtasks(list) {
     .filter((s) => s && typeof s === 'object')
     .map((s) => {
       const out = { text: String(s.text ?? '').slice(0, 500), done: Boolean(s.done) };
+      // When it was checked off, kept only while it stays checked off (feeds the history section).
+      const doneAt = out.done && s.doneAt ? new Date(s.doneAt) : null;
+      if (doneAt && !Number.isNaN(doneAt.getTime())) out.doneAt = doneAt.toISOString();
       const owners = normalizePeople(s.owners);
       if (owners.length) out.owners = owners;
       return out;
@@ -469,4 +506,24 @@ export function normalizePeople(list) {
     }
   }
   return out;
+}
+
+// Oldest first, as stored. Entries written by hand without an id get a stable one from their content.
+export function normalizeUpdates(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((u) => (typeof u === 'string' ? { text: u } : u))
+    .filter((u) => u && typeof u === 'object' && String(u.text ?? '').trim())
+    .map((u) => {
+      const d = u.at ? new Date(u.at) : null;
+      const at = d && !Number.isNaN(d.getTime()) ? d.toISOString() : null;
+      const out = {
+        id: String(u.id ?? createHash('sha1').update(`${u.at}|${u.text}`).digest('hex').slice(0, 8)),
+        text: String(u.text).trim().slice(0, 2000),
+        at,
+      };
+      if (u.author) out.author = String(u.author).slice(0, 80);
+      return out;
+    })
+    .sort((a, b) => String(a.at ?? '').localeCompare(String(b.at ?? '')));
 }

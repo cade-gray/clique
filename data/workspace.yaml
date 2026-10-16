@@ -46,21 +46,6 @@ properties:
         color: brown
       - value: Clique
         color: gray
-  - key: pattern
-    name: Pattern
-    type: select
-    options:
-      - value: REST API
-        color: blue
-      - value: SFTP file feed
-        color: brown
-      - value: Webhook / events
-        color: purple
-      - value: Database sync
-        color: gray
-  - key: link
-    name: Runbook
-    type: url
   - key: summary
     name: Summary
     type: text

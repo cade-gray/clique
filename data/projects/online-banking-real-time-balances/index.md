@@ -39,6 +39,15 @@ pattern: REST API
 estimate: 15
 link: https://example.com/runbooks/balances
 summary: Members see posted and pending balances within two seconds of a transaction.
+updates:
+  - id: c3d4e501
+    text: Gateway endpoint is up in staging. p95 is 610 ms, under the 800 ms target.
+    at: 2026-10-09T15:20:00.000Z
+    author: Alex
+  - id: c3d4e502
+    text: Pen test passed. Waiting on the token scope review before we start the 10% rollout.
+    at: 2026-10-14T17:45:00.000Z
+    author: Sam
 ---
 
 ## Overview

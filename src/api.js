@@ -25,6 +25,8 @@ export const api = {
   project: (id) => request('GET', `projects/${enc(id)}`),
   createProject: (input) => request('POST', 'projects', input),
   updateProject: (id, patch) => request('PATCH', `projects/${enc(id)}`, patch),
+  addUpdate: (id, input) => request('POST', `projects/${enc(id)}/updates`, input),
+  deleteUpdate: (id, uid) => request('DELETE', `projects/${enc(id)}/updates/${enc(uid)}`),
   deleteProject: (id) => request('DELETE', `projects/${enc(id)}`),
   reorder: (status, ids) => request('POST', 'board/reorder', { status, ids }),
 
