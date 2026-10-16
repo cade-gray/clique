@@ -85,3 +85,47 @@ test('ids are validated against path traversal', async () => {
   await assert.rejects(store.getPage('x', '..%2Fpasswd'), (e) => e.status === 400);
   await assert.rejects(store.saveWorkspace({ columns: [{ id: 'a' }], properties: [{ key: 'status', type: 'text' }] }), (e) => e.status === 400);
 });
+
+test('projects and subtasks can have multiple owners', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Owners' });
+  await store.updateProject(p.id, {
+    properties: { owner: ['Cade', ' Sam ', 'cade', ''] },
+    subtasks: [{ text: 'a', owners: ['Ann', 'Bo', 'ann'] }, { text: 'b', owners: [] }],
+  });
+  const got = await store.getProject(p.id);
+  assert.deepEqual(got.properties.owner, ['Cade', 'Sam']);
+  assert.deepEqual(got.subtasks, [{ text: 'a', done: false, owners: ['Ann', 'Bo'] }, { text: 'b', done: false }]);
+  await store.updateProject(p.id, { properties: { owner: [] } });
+  assert.equal((await store.getProject(p.id)).properties.owner, undefined);
+});
+
+test('status always resolves to a real column, defaulting to backlog', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'No status given', status: 'nope' });
+  assert.equal(p.status, 'backlog');
+  await assert.rejects(store.updateProject(p.id, { status: 'nope' }), (e) => e.status === 400);
+  await store.updateProject(p.id, { status: 'done' });
+  const ws = await store.getWorkspace();
+  await store.saveWorkspace({ ...ws, columns: ws.columns.filter((c) => c.id !== 'done') });
+  assert.equal((await store.getProject(p.id)).status, 'backlog');
+  assert.equal((await store.listProjects())[0].status, 'backlog');
+});
+
+test('blocked flag carries an optional reason that clears when unblocked', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Stuck' });
+  assert.equal(p.blocked, false);
+  await store.updateProject(p.id, { blockedReason: 'ignored while not blocked' });
+  assert.equal((await store.getProject(p.id)).blockedReason, '');
+  await store.updateProject(p.id, { blocked: true });
+  await store.updateProject(p.id, { blockedReason: '  Waiting on design ' });
+  let got = await store.getProject(p.id);
+  assert.deepEqual([got.blocked, got.blockedReason], [true, 'Waiting on design']);
+  assert.equal((await store.listProjects())[0].blockedReason, 'Waiting on design');
+  await store.updateProject(p.id, { blocked: false });
+  got = await store.getProject(p.id);
+  assert.deepEqual([got.blocked, got.blockedReason], [false, '']);
+  const file = await fs.readFile(path.join(store.projectsDir, p.id, 'index.md'), 'utf8');
+  assert.doesNotMatch(file, /blocked/);
+});

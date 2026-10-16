@@ -7,6 +7,7 @@ export const TYPE_LABELS = {
   number: 'Number',
   select: 'Select',
   multi_select: 'Multi-select',
+  people: 'People',
   date: 'Date',
   checkbox: 'Checkbox',
   url: 'URL',
@@ -29,12 +30,52 @@ export function Tag({ color = 'gray', children, onRemove }) {
   );
 }
 
+// A people value is a list of names; older files may hold a single string.
+export function toPeople(v) {
+  return Array.isArray(v) ? v : isEmpty(v) ? [] : [String(v)];
+}
+
+export const PEOPLE_LIST_ID = 'people-suggestions';
+
+// Chips plus a text box; Enter or comma adds a name. Suggestions come from a shared <datalist>.
+export function PeopleInput({ value, onChange, placeholder = '+ Add person' }) {
+  const list = toPeople(value);
+  const add = (input) => {
+    const names = input.value.split(',').map((n) => n.trim()).filter(Boolean);
+    input.value = '';
+    const fresh = names.filter((n, i) => !list.some((x) => x.toLowerCase() === n.toLowerCase()) && names.findIndex((m) => m.toLowerCase() === n.toLowerCase()) === i);
+    if (fresh.length) onChange([...list, ...fresh]);
+  };
+  return (
+    <div className="multi">
+      {list.map((n) => (
+        <Tag key={n} onRemove={() => onChange(list.filter((x) => x !== n))}>
+          {n}
+        </Tag>
+      ))}
+      <input
+        className="people-add"
+        list={PEOPLE_LIST_ID}
+        placeholder={placeholder}
+        onBlur={(e) => add(e.target)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            add(e.currentTarget);
+          }
+        }}
+      />
+    </div>
+  );
+}
+
 export function isEmpty(v) {
   return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
 }
 
 // Compact read-only rendering used on board cards.
-export function PropertyValue({ def, value }) {
+// `showLabel` false drops the property name from the value (for layouts that label it separately).
+export function PropertyValue({ def, value, showLabel = true }) {
   if (isEmpty(value)) return null;
   switch (def.type) {
     case 'select':
@@ -45,16 +86,19 @@ export function PropertyValue({ def, value }) {
           {String(v)}
         </Tag>
       ));
+    case 'people':
+      return toPeople(value).map((n) => <Tag key={n}>{n}</Tag>);
     case 'checkbox':
-      return value ? <span className="prop-inline">✓ {def.name}</span> : null;
+      return value ? <span className="prop-inline">✓{showLabel && ` ${def.name}`}</span> : null;
     case 'date':
       return <span className="prop-inline">📅 {formatDate(value)}</span>;
     case 'url':
-      return <span className="prop-inline">🔗 {def.name}</span>;
+      return <span className="prop-inline">🔗{showLabel && ` ${def.name}`}</span>;
     default:
       return (
         <span className="prop-inline">
-          <span className="muted">{def.name}:</span> {String(value)}
+          {showLabel && <span className="muted">{def.name}: </span>}
+          {String(value)}
         </span>
       );
   }
@@ -103,6 +147,8 @@ export function PropertyInput({ def, value, onChange }) {
         </div>
       );
     }
+    case 'people':
+      return <PeopleInput value={value} onChange={(v) => onChange(v.length ? v : null)} />;
     case 'checkbox':
       return <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked || null)} />;
     case 'date':

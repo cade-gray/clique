@@ -93,9 +93,14 @@ main { flex: 1; min-height: 0; }
   cursor: pointer;
 }
 .card:hover { box-shadow: var(--card-shadow-hover); }
+.card.blocked, .card.blocked:hover { box-shadow: 0 0 0 2px var(--danger); }
+.card-blocked { color: var(--danger); font-size: 12px; margin-bottom: 6px; word-break: break-word; }
 .card.dragging { opacity: 0.4; }
 .card-title { font-weight: 500; margin-bottom: 6px; word-break: break-word; }
-.card-props { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 12px; align-items: center; }
+.card-props { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.card-prop { display: flex; align-items: baseline; gap: 8px; }
+.card-prop-label { flex: 0 0 64px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-prop-value { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .card-props:empty { display: none; }
 .prop-inline { color: var(--text); }
 .card-progress { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--muted); }
@@ -156,6 +161,11 @@ main { flex: 1; min-height: 0; }
 .multi select { min-width: 0 !important; color: var(--muted); }
 .url-input { display: flex; align-items: center; gap: 6px; }
 .props .small { margin-top: 6px; }
+.prop-row input.blocked-reason { flex: 1; max-width: 420px; }
+.people-add { border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; background: transparent; min-width: 90px; width: 110px; font-size: 13px; }
+.prop-row .multi .people-add { min-width: 90px; width: 110px; }
+.people-add:hover { background: var(--hover); }
+.people-add:focus { border-color: var(--accent); background: var(--input-bg); outline: none; }
 
 .subtasks { margin-bottom: 20px; }
 .subtasks h3 { font-size: 16px; margin: 0 0 6px; }
