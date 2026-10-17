@@ -4,6 +4,7 @@ import ListView from './components/ListView.jsx';
 import Board from './components/Board.jsx';
 import ProjectView from './components/ProjectView.jsx';
 import Settings from './components/Settings.jsx';
+import ImportView from './components/ImportView.jsx';
 
 // Hash routes keep deep links working on IIS without URL rewrite rules:
 //   #/            board view
@@ -11,11 +12,13 @@ import Settings from './components/Settings.jsx';
 //   #/p/:id       project overview
 //   #/p/:id/:page page inside a project
 //   #/settings    columns and properties
+//   #/import      import from Microsoft Planner
 function parseHash() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
   if (parts[0] === 'p' && parts[1]) return { view: 'project', id: parts[1], page: parts[2] || null };
   if (parts[0] === 'list') return { view: 'list' };
   if (parts[0] === 'settings') return { view: 'settings' };
+  if (parts[0] === 'import') return { view: 'import' };
   return { view: 'board' };
 }
 
@@ -87,6 +90,9 @@ export default function App() {
           <a href="#/settings" className={route.view === 'settings' ? 'active' : ''}>
             Properties &amp; columns
           </a>
+          <a href="#/import" className={route.view === 'import' ? 'active' : ''}>
+            Import
+          </a>
         </nav>
         <button className="theme-toggle" onClick={toggleTheme} title="Switch between light and dark mode">
           {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
@@ -102,6 +108,7 @@ export default function App() {
         {workspace && route.view === 'settings' && (
           <Settings workspace={workspace} onSaved={setWorkspace} />
         )}
+        {workspace && route.view === 'import' && <ImportView workspace={workspace} />}
       </main>
     </div>
   );

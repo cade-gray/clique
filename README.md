@@ -159,6 +159,44 @@ Property, status and to-do changes save immediately. Each property and the statu
 - **Maintenance**: projects in the **Live** column have a Maintenance checkbox that outlines the card in yellow (`maintenance` in the frontmatter). A project that is both blocked and in maintenance gets a yellow outline with a red one around it. Moving a project out of Live hides the flag; it comes back if the project returns to Live.
 - **To-dos**: check off, edit inline, drag to reorder, assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.)
 - **Global properties** (Properties & columns screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
+- **Import from Microsoft Planner**: turn a Planner plan into projects, one per task. See below.
+
+## Importing from Microsoft Planner
+
+Planner can't send data to other apps directly, but it can export a plan to an Excel workbook, which Clique reads. Each Planner task becomes a Clique project.
+
+**1. Export from Planner**
+
+1. Open the plan in Planner (in Teams, or at [planner.cloud.microsoft](https://planner.cloud.microsoft)).
+2. Select **…** next to the plan name at the top, then **Export plan to Excel**. (In older versions of Planner the menu is the **…** to the right of the plan's tabs.)
+3. The `.xlsx` file downloads to your Downloads folder. Upload it as it is: there's no need to open it, and don't save it as CSV.
+
+Export one plan at a time. Planner has no export for "all my plans" or "my tasks". If you don't see **Export plan to Excel**, your organisation may be on a Planner version or plan type that doesn't offer it yet; Microsoft is still rolling the option out in the new Planner.
+
+**2. Import into Clique**
+
+1. Open **Import** in the top bar and choose the file. Nothing is saved yet: Clique shows the plan's tasks and buckets.
+2. Choose a board column for each bucket, or **Don't import** to leave it out. A bucket named like a column (e.g. "In progress") starts on that column, a bucket whose tasks are all completed starts on **Live**, and the rest start on **Backlog**.
+3. Select **Import N projects**.
+
+What goes where:
+
+| Planner | Clique |
+| --- | --- |
+| Task name | Project title |
+| Description | The project's page |
+| Checklist | To-dos. A full count (e.g. 3/3 completed) checks them all off; with a partial count Planner doesn't say *which* items are done, so they import unchecked. |
+| Assigned to | The `owner` people property (or the first people property) |
+| Due date | The `due` date property (or the first date property) |
+| Priority | The `priority` select property: Urgent → Urgent/Critical/High, Important → Important/High, Medium → Medium/Normal, Low → Low, using the first option that exists |
+| Bucket, progress, labels, start date, created by, task ID | A short "Imported from Microsoft Planner" list at the end of the page (plus due date, assignees or priority when the workspace has no property for them) |
+
+Notes:
+
+- Comments, attachments and task history aren't in Planner's export, so they can't be imported.
+- Dates are read in the format Planner writes them, which follows the exporting person's language settings. `11/30/2026` is read as month/day; a date whose first number is over 12 (e.g. `30/11/2026`) is read as day/month. If you export with day/month settings, check the dates of early-month tasks after importing.
+- Importing the same plan twice creates the projects again (with `-2` added to their ids), so delete the first set or leave the buckets you've already imported out.
+- Columns are matched by their header names, not their positions, so exports from both the classic and the new Planner work.
 
 ## Deploying
 
@@ -461,6 +499,8 @@ Serverless or container services that have no persistent disk (App Runner, Lambd
 ```
 server/index.js        Express routes (/api/...) + static hosting of dist/
 server/store.js        markdown-on-disk storage, frontmatter, conflict checks
+server/planner.js      Microsoft Planner import: finds the task table in the export and maps tasks to projects
+server/xlsx.js         minimal .xlsx reader used by the Planner import (no dependency)
 src/App.jsx            hash router and top bar
-src/components/        Board, ListView, ProjectView, Subtasks (to-dos), Updates, Settings, DocBody (autosave), MarkdownEditor (Crepe)
+src/components/        Board, ListView, ProjectView, Subtasks (to-dos), Updates, Settings, ImportView, DocBody (autosave), MarkdownEditor (Crepe)
 ```

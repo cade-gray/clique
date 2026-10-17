@@ -4,7 +4,7 @@ async function request(method, url, body) {
   const raw = body instanceof Blob;
   const res = await fetch(`api/${url}`, {
     method,
-    headers: body ? { 'Content-Type': raw ? body.type : 'application/json' } : undefined,
+    headers: body ? { 'Content-Type': raw ? body.type || 'application/octet-stream' : 'application/json' } : undefined,
     body: body ? (raw ? body : JSON.stringify(body)) : undefined,
   });
   const data = await res.json().catch(() => ({}));
@@ -41,6 +41,10 @@ export const api = {
   deletePage: (id, page) => request('DELETE', `projects/${enc(id)}/pages/${enc(page)}`),
 
   // Resolves to the path to put in the markdown, e.g. "attachments/image-1a2b3c4d.png".
+  // Planner import: preview reads the workbook without saving anything; import creates the projects.
+  previewPlanner: (file) => request('POST', 'import/planner/preview', file),
+  importPlanner: (tasks, buckets) => request('POST', 'import/planner', { tasks, buckets }),
+
   uploadAttachment: (id, file) =>
     request('POST', `projects/${enc(id)}/attachments?name=${enc(file.name ?? '')}`, file).then((r) => r.path),
 };
