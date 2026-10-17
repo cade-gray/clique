@@ -74,11 +74,11 @@ test('board reorder moves cards between columns', async () => {
   const store = await freshStore();
   const a = await store.createProject({ title: 'A', status: 'backlog' });
   const b = await store.createProject({ title: 'B', status: 'backlog' });
-  await store.reorderColumn('done', [b.id, a.id]);
-  const list = (await store.listProjects()).filter((p) => p.status === 'done');
+  await store.reorderColumn('live', [b.id, a.id]);
+  const list = (await store.listProjects()).filter((p) => p.status === 'live');
   assert.deepEqual(list.map((p) => p.id), [b.id, a.id]);
   await assert.rejects(store.reorderColumn('nope', [a.id]), (e) => e.status === 400);
-  await assert.rejects(store.reorderColumn('done', 'not-a-list'), (e) => e.status === 400);
+  await assert.rejects(store.reorderColumn('live', 'not-a-list'), (e) => e.status === 400);
 });
 
 test('ids are validated against path traversal', async () => {
@@ -107,9 +107,9 @@ test('status always resolves to a real column, defaulting to backlog', async () 
   const p = await store.createProject({ title: 'No status given', status: 'nope' });
   assert.equal(p.status, 'backlog');
   await assert.rejects(store.updateProject(p.id, { status: 'nope' }), (e) => e.status === 400);
-  await store.updateProject(p.id, { status: 'done' });
+  await store.updateProject(p.id, { status: 'live' });
   const ws = await store.getWorkspace();
-  await store.saveWorkspace({ ...ws, columns: ws.columns.filter((c) => c.id !== 'done') });
+  await store.saveWorkspace({ ...ws, columns: ws.columns.filter((c) => c.id !== 'live') });
   assert.equal((await store.getProject(p.id)).status, 'backlog');
   assert.equal((await store.listProjects())[0].status, 'backlog');
 });
@@ -201,4 +201,37 @@ test('attachments are saved under the project with unique names and stay out of 
   await assert.rejects(store.saveAttachment('missing', { name: 'x.png', type: 'image/png', data }), (e) => e.status === 404);
   assert.throws(() => store.attachmentFile(p.id, '../index.md'), (e) => e.status === 400);
   assert.throws(() => store.attachmentFile(p.id, 'notes.md'), (e) => e.status === 400);
+});
+
+test('maintenance only shows for live projects and can combine with blocked', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Payments', status: 'live' });
+  assert.equal(p.maintenance, false);
+  let got = await store.updateProject(p.id, { maintenance: true, blocked: true });
+  assert.deepEqual([got.maintenance, got.blocked], [true, true]);
+  // Leaving Live hides the flag; coming back shows it again.
+  got = await store.updateProject(p.id, { status: 'graveyard' });
+  assert.equal(got.maintenance, false);
+  got = await store.updateProject(p.id, { status: 'live' });
+  assert.equal(got.maintenance, true);
+  got = await store.updateProject(p.id, { maintenance: false });
+  assert.equal(got.maintenance, false);
+  assert.doesNotMatch(await fs.readFile(store.projectFile(p.id), 'utf8'), /maintenance/);
+});
+
+test('a workspace with a done column is migrated to live + graveyard on start', async () => {
+  const store = await freshStore();
+  const ws = await store.getWorkspace();
+  await store.saveWorkspace({
+    ...ws,
+    columns: [{ id: 'backlog', name: 'Backlog' }, { id: 'done', name: 'Shipped' }, { id: 'archive', name: 'Archive' }],
+  });
+  const p = await store.createProject({ title: 'Old', status: 'done' });
+  await store.init();
+  assert.deepEqual((await store.getWorkspace()).columns.map((c) => c.id), ['backlog', 'live', 'graveyard', 'archive']);
+  assert.equal((await store.getProject(p.id)).status, 'live');
+  // Running again changes nothing, and a "done" column added later is left alone.
+  await store.saveWorkspace({ ...(await store.getWorkspace()), columns: [...(await store.getWorkspace()).columns, { id: 'done', name: 'Done' }] });
+  await store.init();
+  assert.equal((await store.getWorkspace()).columns.filter((c) => c.id === 'done').length, 1);
 });

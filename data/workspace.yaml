@@ -5,8 +5,10 @@ columns:
     name: In progress
   - id: review
     name: In review
-  - id: done
-    name: Done
+  - id: live
+    name: Live
+  - id: graveyard
+    name: Graveyard
 properties:
   - key: priority
     name: Priority

@@ -63,6 +63,12 @@ export default function ListView({ workspace }) {
         text: (p) => (p.blocked ? 'Yes' : ''),
         reason: (p) => p.blockedReason,
       },
+      {
+        id: 'maintenance',
+        label: 'Maintenance',
+        sort: (p) => (p.maintenance ? 0 : 1),
+        text: (p) => (p.maintenance ? 'Yes' : ''),
+      },
       ...workspace.properties.map((def) => ({
         id: `prop:${def.key}`,
         label: def.name,
@@ -193,7 +199,7 @@ export default function ListView({ workspace }) {
           <tbody>
             {rows.map((p) => (
               <Fragment key={p.id}>
-                <tr className={`project-row ${p.blocked ? 'blocked' : ''} ${showSubtasks && p.subtasks.total ? 'has-subtasks' : ''}`}>
+                <tr className={`project-row ${p.blocked ? 'blocked' : ''} ${p.maintenance ? 'maintenance' : ''} ${showSubtasks && p.subtasks.total ? 'has-subtasks' : ''}`}>
                   {columns.map((c) => (
                     <td key={c.id} className={`col-${c.id.replace(/\W/g, '-')}`}>
                       <Cell c={c} p={p} columns={workspace.columns} />
@@ -246,6 +252,7 @@ function Cell({ c, p, columns }) {
         {p.blockedReason && <div>{p.blockedReason}</div>}
       </div>
     ) : null;
+  if (c.id === 'maintenance') return p.maintenance ? <div className="maintenance-cell">🔧 In maintenance</div> : null;
   if (c.id === 'subtasks') {
     const { done, total } = p.subtasks;
     if (!total) return null;

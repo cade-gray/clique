@@ -48,8 +48,10 @@ columns:                  # left to right on the board; also the Status choices
     name: Backlog         # the label people see; safe to rename any time
   - id: in-progress
     name: In progress
-  - id: done
-    name: Done
+  - id: live              # projects in production; only these can be flagged as in maintenance
+    name: Live
+  - id: graveyard
+    name: Graveyard
 
 properties:               # shown on every project, in this order
   - key: priority         # the frontmatter key in every project file (fixed once created)
@@ -77,12 +79,14 @@ properties:               # shown on every project, in this order
 
 - At least one column is required. The order in the file is the order on the board.
 - Every project always has a valid status. New projects start in `backlog` (or the first column if there is no `backlog`). If a column is removed, or a file names a status that doesn't exist, its projects appear in `backlog`; the file is only rewritten the next time the project is saved.
+- The `live` column id is special: only projects in it show the **Maintenance** checkbox. Rename its label freely, but keep the id.
+- Upgrading from a version before 1.1: on start, a workspace with a `done` column (and no `live` one) has it replaced by **Live**, with **Graveyard** added after it, and every project in `done` is moved to `live`.
 
 **Properties**
 
 | Field | Rules |
 | --- | --- |
-| `key` | Same format as a column `id`, unique. It becomes a flat key in every project's frontmatter. It can't be one of the built-in keys: `title`, `status`, `order`, `subtasks`, `blocked`, `blockedReason`, `updates`, `created`, `updated`. |
+| `key` | Same format as a column `id`, unique. It becomes a flat key in every project's frontmatter. It can't be one of the built-in keys: `title`, `status`, `order`, `subtasks`, `blocked`, `blockedReason`, `maintenance`, `updates`, `created`, `updated`. |
 | `name` | The label shown in the UI and the CSV, up to 80 characters. |
 | `type` | One of the types below. |
 | `options` | For `select` and `multi_select`: a list of `{ value, color }`. Colors: `gray`, `brown`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `red`. |
@@ -117,6 +121,7 @@ status: in-progress          # a column id from workspace.yaml
 order: 0                     # position within the column
 blocked: true                # optional; shows a red outline on the card
 blockedReason: Waiting on design sign-off
+maintenance: true            # optional; yellow outline, only while the project is in the live column
 subtasks:                    # shown as "To-dos" in the app
   - text: Draft wireframes
     done: true
@@ -151,6 +156,7 @@ Property, status and to-do changes save immediately. Each property and the statu
 - **Editor** ([Milkdown Crepe](https://milkdown.dev)): live markdown, `/` menu for headings, lists, task lists, tables, quotes, code blocks (syntax highlighting, language picker, copy button), images and math.
 - **Status updates**: a comment-style timeline on each project (`updates` in the frontmatter, newest first, with an optional name). The latest update shows on the board card and in the list view and CSV.
 - **Blocked**: tick Blocked on a project to outline its card in red; an optional reason shows on the card (`blocked` / `blockedReason` in the frontmatter).
+- **Maintenance**: projects in the **Live** column have a Maintenance checkbox that outlines the card in yellow (`maintenance` in the frontmatter). A project that is both blocked and in maintenance gets a yellow outline with a red one around it. Moving a project out of Live hides the flag; it comes back if the project returns to Live.
 - **To-dos**: check off, edit inline, drag to reorder, assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.)
 - **Global properties** (Properties & columns screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
 
