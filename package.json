@@ -1,6 +1,6 @@
 {
   "name": "clique",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Kanban board for dev teams with Notion-style markdown pages, stored as markdown files on disk",
   "scripts": {
     "dev": "concurrently -k -n api,web \"node --watch server/index.js\" \"vite\"",

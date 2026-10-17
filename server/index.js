@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Store, HttpError } from './store.js';
+import { parsePlannerWorkbook, plannerTargets, importPlannerTasks } from './planner.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // A relative DATA_DIR is resolved from the app folder, not the process working directory,
@@ -55,6 +56,21 @@ api.get('/projects/:id/attachments/:file', (req, res, next) => {
     if (err) next(err.status === 404 ? new HttpError(404, 'Not found') : err);
   });
 });
+
+// Planner import is two steps: upload the exported workbook to see what's in it (nothing is saved),
+// then send back the tasks with a board column chosen for each bucket.
+api.post(
+  '/import/planner/preview',
+  express.raw({ type: () => true, limit: '20mb' }),
+  h(async (req) => {
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) throw new HttpError(400, 'Choose the exported .xlsx file');
+    const preview = parsePlannerWorkbook(req.body);
+    // Which properties assignees, due dates and priorities will land in, so the page can say so.
+    const targets = Object.fromEntries(Object.entries(plannerTargets(await store.getWorkspace())).map(([k, p]) => [k, p?.name ?? null]));
+    return { ...preview, targets };
+  }),
+);
+api.post('/import/planner', h((req) => importPlannerTasks(store, req.body.tasks, req.body.buckets)));
 
 api.post('/projects/:id/pages', h((req) => store.createPage(req.params.id, req.body)));
 api.get('/projects/:id/pages/:page', h((req) => store.getPage(req.params.id, req.params.page)));
