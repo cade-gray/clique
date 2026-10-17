@@ -31,6 +31,31 @@ api.delete('/projects/:id/updates/:uid', h((req) => store.deleteUpdate(req.param
 api.delete('/projects/:id', h((req) => store.deleteProject(req.params.id)));
 api.post('/board/reorder', h((req) => store.reorderColumn(req.body.status, req.body.ids ?? [])));
 
+// Images arrive as the raw request body with their own Content-Type; ?name= is the original file name.
+api.post(
+  '/projects/:id/attachments',
+  express.raw({ type: 'image/*', limit: '20mb' }),
+  h((req) =>
+    store.saveAttachment(req.params.id, {
+      name: req.query.name,
+      type: req.get('Content-Type')?.split(';')[0].trim().toLowerCase(),
+      data: req.body,
+    }),
+  ),
+);
+api.get('/projects/:id/attachments/:file', (req, res, next) => {
+  let file;
+  try {
+    file = store.attachmentFile(req.params.id, req.params.file);
+  } catch (err) {
+    return next(err);
+  }
+  // File names are unique per upload, so the browser can keep them for a long time.
+  res.sendFile(file, { maxAge: '30d', headers: { 'X-Content-Type-Options': 'nosniff' } }, (err) => {
+    if (err) next(err.status === 404 ? new HttpError(404, 'Not found') : err);
+  });
+});
+
 api.post('/projects/:id/pages', h((req) => store.createPage(req.params.id, req.body)));
 api.get('/projects/:id/pages/:page', h((req) => store.getPage(req.params.id, req.params.page)));
 api.patch('/projects/:id/pages/:page', h((req) => store.updatePage(req.params.id, req.params.page, req.body)));
@@ -39,6 +64,7 @@ api.delete('/projects/:id/pages/:page', h((req) => store.deletePage(req.params.i
 api.use((req, res) => res.status(404).json({ error: 'Not found' }));
 api.use((err, req, res, _next) => {
   if (err instanceof HttpError) return res.status(err.status).json({ error: err.message, ...err.extra });
+  if (err.type === 'entity.too.large') return res.status(413).json({ error: 'That file is too large' });
   console.error(err);
   if (['EACCES', 'EPERM'].includes(err.code))
     return res.status(500).json({ error: 'The server cannot write to its data folder. Check the folder permissions.' });

@@ -151,6 +151,7 @@ export default function ProjectView({ id, pageId, workspace }) {
 
             <DocBody
               docKey={`project:${id}`}
+              projectId={id}
               body={project.body}
               version={project.version}
               save={(body, baseVersion) => api.updateProject(id, { body, baseVersion })}
@@ -197,6 +198,7 @@ function PageView({ projectId, pageId, onChanged }) {
       <TitleInput value={page.title} onCommit={rename} />
       <DocBody
         docKey={`page:${projectId}/${pageId}`}
+        projectId={projectId}
         body={page.body}
         version={page.version}
         save={(body, baseVersion) => api.updatePage(projectId, pageId, { body, baseVersion })}

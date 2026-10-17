@@ -7,7 +7,9 @@ import '@milkdown/crepe/theme/frame.css';
 // Notion-style live markdown editor (Milkdown Crepe): markdown renders as you type,
 // "/" opens the block menu, and code blocks get syntax highlighting and a Copy button.
 // The editor is uncontrolled: remount it (change `key`) to load different content.
-export default function MarkdownEditor({ value, onChange, placeholder = "Type '/' for commands" }) {
+// `uploadImage(file)` stores a pasted/dropped/picked image and resolves to the src to write in the
+// markdown; `resolveImage(src)` maps that src to a URL the browser can load. Both are read once at mount.
+export default function MarkdownEditor({ value, onChange, uploadImage, resolveImage, placeholder = "Type '/' for commands" }) {
   const rootRef = useRef(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -18,6 +20,17 @@ export default function MarkdownEditor({ value, onChange, placeholder = "Type '/
       defaultValue: value ?? '',
       featureConfigs: {
         [Crepe.Feature.Placeholder]: { text: placeholder, mode: 'doc' },
+        // Without onUpload, Crepe inserts a temporary blob: URL that is gone once the browser closes.
+        [Crepe.Feature.ImageBlock]: {
+          onUpload: uploadImage
+            ? (file) =>
+                uploadImage(file).catch((err) => {
+                  window.alert(`The image could not be uploaded: ${err.message}`);
+                  throw err;
+                })
+            : undefined,
+          proxyDomURL: resolveImage,
+        },
       },
     });
     // Write "-" bullets like Obsidian does instead of remark's default "*".

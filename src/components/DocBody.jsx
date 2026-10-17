@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { api, attachmentUrl } from '../api.js';
 
 // The editor bundle is large, so load it only when a page is opened.
 const MarkdownEditor = lazy(() => import('./MarkdownEditor.jsx'));
@@ -8,7 +9,8 @@ const SAVE_DELAY_MS = 700;
 // Markdown body with debounced autosave and conflict handling.
 // `save(body, baseVersion)` must resolve to the saved doc ({ version }) or reject with
 // err.status === 409 and err.data.current = { body, version } when someone else saved first.
-export default function DocBody({ docKey, body, version, save }) {
+// Images added to the body are stored in the attachments folder of project `projectId`.
+export default function DocBody({ docKey, projectId, body, version, save }) {
   const [editorKey, setEditorKey] = useState(0);
   const [content, setContent] = useState(body);
   const [status, setStatus] = useState('saved'); // saved | pending | saving | error | conflict
@@ -84,7 +86,13 @@ export default function DocBody({ docKey, body, version, save }) {
         </div>
       )}
       <Suspense fallback={<div className="loading">Loading editor…</div>}>
-        <MarkdownEditor key={`${docKey}:${editorKey}`} value={content} onChange={onChange} />
+        <MarkdownEditor
+          key={`${docKey}:${editorKey}`}
+          value={content}
+          onChange={onChange}
+          uploadImage={(file) => api.uploadAttachment(projectId, file)}
+          resolveImage={(src) => attachmentUrl(projectId, src)}
+        />
       </Suspense>
     </div>
   );

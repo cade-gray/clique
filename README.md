@@ -34,6 +34,7 @@ data/
     website-redesign/
       index.md                       the project: frontmatter + overview page
       meeting-notes.md               an extra page inside the project
+      attachments/                   images pasted into the project's pages, linked as attachments/<file>
   .trash/                            deleted projects and pages are moved here, never erased
 ```
 

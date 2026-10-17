@@ -1,9 +1,11 @@
 // All requests are relative so the app works under an IIS virtual directory.
+// A File/Blob body is sent as-is with its own type; anything else is sent as JSON.
 async function request(method, url, body) {
+  const raw = body instanceof Blob;
   const res = await fetch(`api/${url}`, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
+    headers: body ? { 'Content-Type': raw ? body.type : 'application/json' } : undefined,
+    body: body ? (raw ? body : JSON.stringify(body)) : undefined,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -34,4 +36,14 @@ export const api = {
   createPage: (id, input) => request('POST', `projects/${enc(id)}/pages`, input),
   updatePage: (id, page, patch) => request('PATCH', `projects/${enc(id)}/pages/${enc(page)}`, patch),
   deletePage: (id, page) => request('DELETE', `projects/${enc(id)}/pages/${enc(page)}`),
+
+  // Resolves to the path to put in the markdown, e.g. "attachments/image-1a2b3c4d.png".
+  uploadAttachment: (id, file) =>
+    request('POST', `projects/${enc(id)}/attachments?name=${enc(file.name ?? '')}`, file).then((r) => r.path),
 };
+
+// Markdown links attachments relative to the project folder; the browser loads them through the API.
+export function attachmentUrl(projectId, src) {
+  const m = /^(?:\.\/)?attachments\/([^/?#]+)$/.exec(src ?? '');
+  return m ? `api/projects/${enc(projectId)}/attachments/${m[1]}` : src;
+}
