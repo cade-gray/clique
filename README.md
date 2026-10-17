@@ -1,8 +1,30 @@
 # Clique
 
-A Kanban board of projects where each project opens into Notion-style pages: markdown that renders as you type, code blocks with a copy button, to-dos, and properties defined once for every project.
+Clique is a home base for the solutions a development team builds. Each project, whether an integration, an automation, an internal app or a report feed, gets one card that follows it through the whole software development lifecycle. The card stays useful after go-live as the solution's wiki page.
 
-Everything is stored as plain markdown files on disk (Obsidian-style). There is no database and no login yet; everyone who can reach the site edits the same board.
+Most trackers stop caring about work once it ships, and the knowledge ends up scattered across tickets, chats and someone's notes. In Clique, the page where a solution was planned and built is the same page the team uses to support it afterwards.
+
+## How it's used
+
+The board's columns are the stages of a solution's life (they can be renamed or changed in the app):
+
+| Stage | What the card is for |
+| --- | --- |
+| **Backlog** | Requests and ideas: what's wanted, by whom, and why. |
+| **In progress** | The working space while it's built: to-dos with owners, design notes, field mappings, open questions, and a timeline of status updates. |
+| **In review** | Testing, sign-off and go-live preparation. |
+| **Live** | In production. The page becomes the solution's wiki: what it does, how it works, the systems it touches, runbooks and support notes. Tick **Maintenance** while it's being changed or fixed. |
+| **Graveyard** | Retired. Nothing is deleted, so the history and documentation are still there if someone asks how it used to work, or the solution comes back. |
+
+Each project is more than a ticket:
+
+- **Properties** shared by every project (owners, systems, go-live date, priority, or whatever your team needs) show on the card, so the board doubles as an inventory of what's been built.
+- **Pages**: an overview plus as many sub-pages as you like (design, field mapping, runbook, meeting notes), edited Notion-style with markdown that renders as you type, tables, and code blocks with a copy button.
+- **Status updates** keep a dated record of decisions and progress; the latest one shows on the card.
+- **To-dos** with owners and history, plus **Blocked** and **Maintenance** flags that stand out on the board.
+- **List view** for a sortable, printable, CSV-exportable view of everything, for management reports or audits.
+
+Everything is stored as plain markdown files on disk (Obsidian-style), so the documentation outlives the tool: it can be read, searched, backed up or put in git without Clique. There is no database and no login yet; everyone who can reach the site edits the same board.
 
 ## Run it
 
