@@ -10,6 +10,9 @@
   --danger-bg: #fdecea;
   --danger-border: #f1c7c2;
   --warn-bg: #fff6dc;
+  --warning: #e0a800;
+  --warning-text: #8a5d00;
+  --glow-strength: 85%;            /* a glow needs more colour to show on a light background */
   --hover: #efefed;
   --active: #e8e8e5;
   --column-bg: #efefec;
@@ -36,6 +39,9 @@
   --danger-bg: #3d2523;
   --danger-border: #6b3a36;
   --warn-bg: #3b3420;
+  --warning: #e8b931;
+  --warning-text: #f0c95a;
+  --glow-strength: 60%;
   --hover: #2d2d2d;
   --active: #333333;
   --column-bg: #262626;
@@ -89,13 +95,27 @@ main { flex: 1; min-height: 0; }
 .column-head .count { color: var(--muted); font-weight: 400; }
 .cards { display: flex; flex-direction: column; gap: 6px; min-height: 20px; }
 .card {
-  display: block; background: var(--panel); border-radius: 8px; padding: 10px 12px;
+  display: block; background: var(--panel); border-radius: 8px; padding: 8px 10px;
+  /* Transparent until a status colours it; padding is 2px less to keep the card the same size. */
+  border: 2px solid transparent;
   box-shadow: var(--card-shadow);
   cursor: pointer;
 }
 .card:hover { box-shadow: var(--card-shadow-hover); }
-.card.blocked, .card.blocked:hover { box-shadow: 0 0 0 2px var(--danger); }
+/* Borders and outlines snap to whole screen pixels (box-shadow rings don't), so the two
+   rings stay the same width at any display scaling. */
+.card.blocked { border-color: var(--danger); }
+.card.maintenance { border-color: var(--warning); }
+/* Blocked and in maintenance: yellow on the inside, red around it, both 3px so the pair
+   reads clearly. Padding gives back the extra 1px of border to keep the card's size. */
+.card.blocked.maintenance { border: 3px solid var(--warning); padding: 7px 9px; outline: 3px solid var(--danger); }
+/* The outermost ring glows in its own colour (replacing the card shadow, hovered or not). */
+.card.blocked, .card.blocked:hover { box-shadow: 0 0 10px color-mix(in srgb, var(--danger) var(--glow-strength), transparent); }
+.card.maintenance, .card.maintenance:hover { box-shadow: 0 0 10px color-mix(in srgb, var(--warning) var(--glow-strength), transparent); }
+/* The 3px spread (the outline's width) starts the glow under the outline, so it comes from the red ring. */
+.card.blocked.maintenance, .card.blocked.maintenance:hover { box-shadow: 0 0 10px 3px color-mix(in srgb, var(--danger) var(--glow-strength), transparent); }
 .card-blocked { color: var(--danger); font-size: 12px; margin-bottom: 6px; word-break: break-word; }
+.card-maintenance { color: var(--warning-text); font-size: 12px; margin-bottom: 6px; }
 .card.dragging { opacity: 0.4; }
 .card-title { font-weight: 500; margin-bottom: 6px; word-break: break-word; }
 .card-props { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
@@ -139,10 +159,13 @@ table.list tr.subtask-row td { padding: 0 12px 10px 28px; }
 .list-subtasks .box { color: var(--muted); }
 .list-subtasks li.done .text { color: var(--muted); text-decoration: line-through; }
 table.list tr.blocked td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+table.list tr.maintenance td:first-child { box-shadow: inset 3px 0 0 var(--warning); }
+table.list tr.blocked.maintenance td:first-child { box-shadow: inset 3px 0 0 var(--danger), inset 6px 0 0 var(--warning); }
 table.list .col-title { font-weight: 500; min-width: 200px; }
 table.list .col-title a:hover { text-decoration: underline; }
 .cell-values { display: flex; flex-wrap: wrap; gap: 4px; }
 .blocked-cell { color: var(--danger); font-size: 13px; min-width: 140px; }
+.maintenance-cell { color: var(--warning-text); font-size: 13px; white-space: nowrap; }
 .list-progress { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); min-width: 110px; }
 .list-progress .bar { flex: 1; height: 4px; background: var(--hover); border-radius: 2px; overflow: hidden; }
 .list-progress .bar div { height: 100%; background: var(--progress); }
@@ -152,7 +175,7 @@ table.list .col-title a:hover { text-decoration: underline; }
 @media print {
   :root[data-theme='dark'] {
     --bg: #fff; --panel: #fff; --panel-alt: #f5f5f3; --border: #d8d8d4; --text: #222; --muted: #666;
-    --hover: #eee; --danger: #c4372b; --progress: #4caf7a;
+    --hover: #eee; --danger: #c4372b; --progress: #4caf7a; --warning: #e0a800; --warning-text: #8a5d00;
   }
   :root[data-theme='dark'] .tag { background: #e9e9e7; color: #333; }
   .topbar, .list-toolbar { display: none; }

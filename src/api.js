@@ -19,6 +19,9 @@ async function request(method, url, body) {
 
 const enc = encodeURIComponent;
 
+// Keep in step with LIVE_STATUS in server/store.js: only projects in this column can be in maintenance.
+export const LIVE_STATUS = 'live';
+
 export const api = {
   workspace: () => request('GET', 'workspace'),
   saveWorkspace: (ws) => request('PUT', 'workspace', ws),

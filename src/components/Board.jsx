@@ -133,7 +133,7 @@ function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd
     <>
       {dropBefore && <div className="drop-marker" />}
       <a
-        className={`card ${project.blocked ? 'blocked' : ''} ${dragging ? 'dragging' : ''}`}
+        className={`card ${project.blocked ? 'blocked' : ''} ${project.maintenance ? 'maintenance' : ''} ${dragging ? 'dragging' : ''}`}
         href={`#/p/${encodeURIComponent(project.id)}`}
         draggable
         onDragStart={(e) => {
@@ -153,6 +153,11 @@ function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd
           <div className="card-blocked">
             <strong>⛔ Blocked</strong>
             {project.blockedReason && <span>: {project.blockedReason}</span>}
+          </div>
+        )}
+        {project.maintenance && (
+          <div className="card-maintenance">
+            <strong>🔧 In maintenance</strong>
           </div>
         )}
         <div className="card-props">

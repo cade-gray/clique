@@ -13,13 +13,17 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import YAML from 'yaml';
 
-export const RESERVED_KEYS = ['title', 'status', 'order', 'subtasks', 'blocked', 'blockedReason', 'updates', 'created', 'updated'];
+export const RESERVED_KEYS = ['title', 'status', 'order', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
+
+// The column for projects that are in production. Only projects here can be flagged as in maintenance.
+export const LIVE_STATUS = 'live';
 
 const DEFAULT_WORKSPACE = {
   columns: [
     { id: 'backlog', name: 'Backlog' },
     { id: 'in-progress', name: 'In progress' },
-    { id: 'done', name: 'Done' },
+    { id: 'live', name: 'Live' },
+    { id: 'graveyard', name: 'Graveyard' },
   ],
   properties: [
     {
@@ -175,6 +179,28 @@ export class Store {
       await writeFileAtomic(this.workspaceFile, YAML.stringify(DEFAULT_WORKSPACE));
       if ((await fs.readdir(this.projectsDir)).length === 0) await this.seed();
     }
+    await this.migrateDoneToLive();
+  }
+
+  // Workspaces from before 1.1 have a "done" column. It becomes "Live", with a "Graveyard"
+  // column after it. Projects move first, so if this stops halfway it simply runs again next start.
+  async migrateDoneToLive() {
+    const ws = await this.getWorkspace();
+    const i = ws.columns.findIndex((c) => c.id === 'done');
+    if (i < 0 || ws.columns.some((c) => c.id === LIVE_STATUS)) return;
+    for (const e of await fs.readdir(this.projectsDir, { withFileTypes: true })) {
+      if (!e.isDirectory() || !ID_RE.test(e.name)) continue;
+      const file = path.join(this.projectsDir, e.name, 'index.md');
+      if (!(await exists(file))) continue;
+      await withLock(file, async () => {
+        const doc = await this.readDoc(file);
+        if (doc.data.status === 'done') await writeFileAtomic(file, stringifyMarkdown({ ...doc.data, status: LIVE_STATUS }, doc.body));
+      });
+    }
+    const columns = [...ws.columns];
+    columns[i] = { id: LIVE_STATUS, name: 'Live' };
+    if (!columns.some((c) => c.id === 'graveyard')) columns.splice(i + 1, 0, { id: 'graveyard', name: 'Graveyard' });
+    await this.saveWorkspace({ ...ws, columns });
   }
 
   // A first-run example so a fresh install shows what a project looks like.
@@ -295,16 +321,19 @@ export class Store {
     const updates = normalizeUpdates(data.updates);
     const props = {};
     for (const [k, v] of Object.entries(data)) if (!RESERVED_KEYS.includes(k)) props[k] = v;
+    const status = ws.columns.some((c) => c.id === data.status) ? data.status : defaultStatus(ws);
     return {
       id,
       title: data.title || id,
-      status: ws.columns.some((c) => c.id === data.status) ? data.status : defaultStatus(ws),
+      status,
       order: Number(data.order) || 0,
       properties: props,
       latestUpdate: updates.length ? updates[updates.length - 1] : null,
       updateCount: updates.length,
       blocked: data.blocked === true,
       blockedReason: data.blocked === true ? String(data.blockedReason ?? '') : '',
+      // The flag stays in the file if the project leaves Live, and shows again if it comes back.
+      maintenance: data.maintenance === true && status === LIVE_STATUS,
       subtasks: { done: subtasks.filter((s) => s.done).length, total: subtasks.length },
       created: data.created ?? null,
       updated: data.updated ?? null,
@@ -393,6 +422,10 @@ export class Store {
         const reason = String(patch.blockedReason).trim().slice(0, 500);
         if (reason && data.blocked === true) data.blockedReason = reason;
         else delete data.blockedReason;
+      }
+      if (patch.maintenance !== undefined) {
+        if (patch.maintenance) data.maintenance = true;
+        else delete data.maintenance;
       }
       if (patch.subtasks !== undefined) data.subtasks = normalizeSubtasks(patch.subtasks);
       if (patch.properties) {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api } from '../api.js';
+import { api, LIVE_STATUS } from '../api.js';
 import { navigate } from '../App.jsx';
 import DocBody from './DocBody.jsx';
 import Subtasks from './Subtasks.jsx';
@@ -123,6 +123,12 @@ export default function ProjectView({ id, pageId, workspace }) {
                 <div className="prop-row">
                   <label>Reason</label>
                   <BlockedReason value={project.blockedReason} onCommit={(blockedReason) => patch({ blockedReason })} />
+                </div>
+              )}
+              {project.status === LIVE_STATUS && (
+                <div className="prop-row">
+                  <label>Maintenance</label>
+                  <input type="checkbox" checked={project.maintenance} onChange={(e) => patch({ maintenance: e.target.checked })} />
                 </div>
               )}
               {workspace.properties.map((def) => (

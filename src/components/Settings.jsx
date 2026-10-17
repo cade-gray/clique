@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { COLORS, TYPE_LABELS, Tag } from './props.jsx';
 
 // Keep in step with RESERVED_KEYS in server/store.js.
-const RESERVED = ['title', 'status', 'order', 'subtasks', 'blocked', 'blockedReason', 'updates', 'created', 'updated'];
+const RESERVED = ['title', 'status', 'order', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
 
 function slugify(s) {
   return (
