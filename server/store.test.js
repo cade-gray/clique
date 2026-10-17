@@ -183,3 +183,22 @@ test('subtasks keep a completion time only while checked off', async () => {
     { text: 'c', done: true },
   ]);
 });
+
+test('attachments are saved under the project with unique names and stay out of the page list', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Screenshots' });
+  const data = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+  const a = await store.saveAttachment(p.id, { name: 'image.png', type: 'image/png', data });
+  const b = await store.saveAttachment(p.id, { name: 'image.png', type: 'image/png', data });
+  assert.match(a.path, /^attachments\/image-[0-9a-f]{8}\.png$/);
+  assert.notEqual(a.path, b.path);
+  const file = store.attachmentFile(p.id, a.path.slice('attachments/'.length));
+  assert.deepEqual(await fs.readFile(file), data);
+  assert.equal((await store.getProject(p.id)).pages.length, 0);
+
+  await assert.rejects(store.saveAttachment(p.id, { name: 'x.svg', type: 'image/svg+xml', data }), (e) => e.status === 415);
+  await assert.rejects(store.saveAttachment(p.id, { name: 'x.png', type: 'image/png', data: Buffer.alloc(0) }), (e) => e.status === 400);
+  await assert.rejects(store.saveAttachment('missing', { name: 'x.png', type: 'image/png', data }), (e) => e.status === 404);
+  assert.throws(() => store.attachmentFile(p.id, '../index.md'), (e) => e.status === 400);
+  assert.throws(() => store.attachmentFile(p.id, 'notes.md'), (e) => e.status === 400);
+});

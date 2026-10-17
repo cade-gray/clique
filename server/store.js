@@ -3,7 +3,8 @@
 //   workspace.yaml              board columns + globally defined properties
 //   projects/<id>/index.md      the project: frontmatter (status, properties, to-dos, updates) + overview body
 //   projects/<id>/<page>.md     extra pages inside the project
-//   .trash/                     deleted projects and pages land here instead of being removed
+//   projects/<id>/attachments/  images pasted into the project's pages, linked as attachments/<file>
+//   .trash/                    deleted projects and pages land here instead of being removed
 //
 // Everything is plain text so the folder can be opened in Obsidian, diffed, or backed up as-is.
 
@@ -92,6 +93,18 @@ export function slugify(s) {
 }
 
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,79}$/;
+
+// Image types accepted as attachments. SVG is left out because it can carry script.
+export const IMAGE_TYPES = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/avif': 'avif',
+  'image/bmp': 'bmp',
+};
+// A single file name (no folders), so an attachment path can never leave the attachments folder.
+const ATTACHMENT_RE = /^\w[\w .-]{0,119}\.(png|jpe?g|gif|webp|avif|bmp)$/i;
 function assertId(id, what = 'id') {
   if (typeof id !== 'string' || !ID_RE.test(id)) throw new HttpError(400, `Invalid ${what}`);
   return id;
@@ -451,6 +464,29 @@ export class Store {
     const dir = this.projectDir(id);
     if (!(await exists(dir))) throw new HttpError(404, 'Not found');
     await this.moveToTrash(dir, id);
+  }
+
+  // ----- attachments -----
+  // Stored next to the markdown and linked by a relative path, so the folder still
+  // shows the images when opened in Obsidian or any other markdown viewer.
+
+  attachmentFile(id, file) {
+    if (typeof file !== 'string' || !ATTACHMENT_RE.test(file)) throw new HttpError(400, 'Invalid attachment name');
+    return path.join(this.projectDir(id), 'attachments', file);
+  }
+
+  async saveAttachment(id, { name, type, data }) {
+    const ext = IMAGE_TYPES[type];
+    if (!ext) throw new HttpError(415, 'Only PNG, JPEG, GIF, WebP, AVIF and BMP images can be attached');
+    if (!Buffer.isBuffer(data) || data.length === 0) throw new HttpError(400, 'The image is empty');
+    const dir = this.projectDir(id);
+    if (!(await exists(dir))) throw new HttpError(404, 'Project not found');
+    await fs.mkdir(path.join(dir, 'attachments'), { recursive: true });
+    // The random suffix keeps two pastes of "image.png" from overwriting each other.
+    const base = slugify(path.parse(String(name ?? '')).name).slice(0, 40);
+    const file = `${base === 'untitled' ? 'image' : base}-${randomUUID().slice(0, 8)}.${ext}`;
+    await writeFileAtomic(this.attachmentFile(id, file), data);
+    return { path: `attachments/${file}` };
   }
 
   // ----- pages -----
