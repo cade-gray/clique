@@ -350,6 +350,25 @@ table.list .col-title a:hover { text-decoration: underline; }
 .import table.list th { padding: 8px 12px; font-size: 12px; color: var(--muted); }
 .import table.list tr.skipped td { opacity: 0.45; }
 
+/* ---------- help ---------- */
+.help section { line-height: 1.6; }
+.help section p { margin: 0 0 10px; }
+.help section p:last-child { margin-bottom: 0; }
+.help .lead { font-size: 17px; }
+.help ul { margin: 8px 0 0; padding-left: 20px; }
+.help li { margin-bottom: 6px; }
+.help a { color: var(--accent); }
+.help a:hover { text-decoration: underline; }
+.help code { background: var(--hover); border-radius: 4px; padding: 1px 5px; font-size: 13px; }
+.help .stages { margin: 8px 0; }
+.help .stages > div { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.help .stages > div:last-child { border-bottom: none; }
+.help .stages dt { font-weight: 600; }
+.help .stages dd { margin: 0; }
+@media (max-width: 560px) {
+  .help .stages > div { grid-template-columns: 1fr; gap: 2px; }
+}
+
 @media (max-width: 760px) {
   .project { flex-direction: column; }
   .sidebar { width: auto; flex: none; border-right: none; border-bottom: 1px solid var(--border); }
