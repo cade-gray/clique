@@ -1,6 +1,6 @@
 {
   "name": "clique",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Home base for developed solutions: tracks each one through the software development lifecycle and keeps it documented after go-live, as markdown files on disk",
   "scripts": {
     "dev": "concurrently -k -n api,web \"node --watch server/index.js\" \"vite\"",

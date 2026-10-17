@@ -5,6 +5,7 @@ import Board from './components/Board.jsx';
 import ProjectView from './components/ProjectView.jsx';
 import Settings from './components/Settings.jsx';
 import ImportView from './components/ImportView.jsx';
+import HelpView from './components/HelpView.jsx';
 
 // Hash routes keep deep links working on IIS without URL rewrite rules:
 //   #/            board view
@@ -13,12 +14,14 @@ import ImportView from './components/ImportView.jsx';
 //   #/p/:id/:page page inside a project
 //   #/settings    columns and properties
 //   #/import      import from Microsoft Planner
+//   #/help        what Clique is for and how the board is used
 function parseHash() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
   if (parts[0] === 'p' && parts[1]) return { view: 'project', id: parts[1], page: parts[2] || null };
   if (parts[0] === 'list') return { view: 'list' };
   if (parts[0] === 'settings') return { view: 'settings' };
   if (parts[0] === 'import') return { view: 'import' };
+  if (parts[0] === 'help') return { view: 'help' };
   return { view: 'board' };
 }
 
@@ -93,6 +96,9 @@ export default function App() {
           <a href="#/import" className={route.view === 'import' ? 'active' : ''}>
             Import
           </a>
+          <a href="#/help" className={route.view === 'help' ? 'active' : ''}>
+            Help
+          </a>
         </nav>
         <button className="theme-toggle" onClick={toggleTheme} title="Switch between light and dark mode">
           {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
@@ -109,6 +115,7 @@ export default function App() {
           <Settings workspace={workspace} onSaved={setWorkspace} />
         )}
         {workspace && route.view === 'import' && <ImportView workspace={workspace} />}
+        {workspace && route.view === 'help' && <HelpView workspace={workspace} />}
       </main>
     </div>
   );

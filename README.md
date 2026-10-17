@@ -182,6 +182,7 @@ Property, status and to-do changes save immediately. Each property and the statu
 - **To-dos**: check off, edit inline, drag to reorder, assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.)
 - **Global properties** (Properties & columns screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
 - **Import from Microsoft Planner**: turn a Planner plan into projects, one per task. See below.
+- **Help page** (top bar): explains what Clique is for and what each board column means, using the board's own column and property names, so new team members can find their way around.
 
 ## Importing from Microsoft Planner
 
@@ -524,5 +525,5 @@ server/store.js        markdown-on-disk storage, frontmatter, conflict checks
 server/planner.js      Microsoft Planner import: finds the task table in the export and maps tasks to projects
 server/xlsx.js         minimal .xlsx reader used by the Planner import (no dependency)
 src/App.jsx            hash router and top bar
-src/components/        Board, ListView, ProjectView, Subtasks (to-dos), Updates, Settings, ImportView, DocBody (autosave), MarkdownEditor (Crepe)
+src/components/        Board, ListView, ProjectView, Subtasks (to-dos), Updates, Settings, ImportView, HelpView, DocBody (autosave), MarkdownEditor (Crepe)
 ```
