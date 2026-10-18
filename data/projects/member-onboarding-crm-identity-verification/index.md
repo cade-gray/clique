@@ -1,7 +1,7 @@
 ---
 title: "Member onboarding: CRM + identity verification"
 status: backlog
-group: integrations
+group: it-integrations
 order: 0
 created: 2026-10-16T02:32:36.278Z
 updated: 2026-10-16T02:32:36.281Z

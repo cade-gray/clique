@@ -87,7 +87,7 @@ export default function Settings({ workspace, onSaved }) {
   return (
     <div className="settings">
       <div className="settings-bar">
-        <h2>Properties, columns &amp; groups</h2>
+        <h2>Configuration</h2>
         <span className="muted">{status}</span>
         <button className="primary" disabled={!dirty} onClick={save}>
           Save changes
@@ -95,8 +95,43 @@ export default function Settings({ workspace, onSaved }) {
       </div>
 
       <section>
-        <h3>Board columns</h3>
-        <p className="muted small">Each column is a project status. Removing a column moves its projects to Backlog (or the first column if there is no Backlog).</p>
+        <h3>Groups</h3>
+        <p className="muted small">
+          Teams of people. Each project can belong to one group, and its members are offered first when choosing owners for the project and its
+          to-dos. Removing a group leaves its projects without one.
+        </p>
+        {groups.map((g, i) => (
+          <div className="prop-def" key={keyOf(g, 'id')}>
+            <div className="settings-row">
+              <input value={g.name} onChange={(e) => setGroups(rename(groups, i, e.target.value, 'id', savedGroupIds))} aria-label="Group name" />
+              <button className="icon" onClick={() => setGroups(groups.filter((_, j) => j !== i))} title="Remove group">
+                ×
+              </button>
+            </div>
+            <div className="options">
+              {g.members.map((n) => (
+                <Tag key={n} onRemove={() => setGroup(i, { members: g.members.filter((m) => m !== n) })}>
+                  {n}
+                </Tag>
+              ))}
+              <AddInput placeholder="+ Person" onAdd={(v) => addMembers(i, v)} />
+            </div>
+          </div>
+        ))}
+        <AddInput
+          placeholder="+ Add group"
+          onAdd={(name) =>
+            setGroups([
+              ...groups,
+              { id: uniqueKey(slugify(name), [...groups.map((g) => g.id), ...savedGroupIds]), name, members: [], tmp: `t${nextTmp++}` },
+            ])
+          }
+        />
+      </section>
+
+      <section>
+        <h3>Project statuses</h3>
+        <p className="muted small">Each status is a column on the board, in this order. Removing a status moves its projects to Backlog (or the first status if there is no Backlog).</p>
         {columns.map((c, i) => (
           <div className="settings-row" key={keyOf(c, 'id')}>
             <input value={c.name} onChange={(e) => setColumns(rename(columns, i, e.target.value, 'id', savedColumnIds))} />
@@ -113,7 +148,7 @@ export default function Settings({ workspace, onSaved }) {
           </div>
         ))}
         <AddInput
-          placeholder="+ Add column"
+          placeholder="+ Add status"
           onAdd={(name) =>
             setColumns([...columns, { id: uniqueKey(slugify(name), [...columns.map((c) => c.id), ...savedColumnIds]), name, tmp: `t${nextTmp++}` }])
           }
@@ -185,41 +220,6 @@ export default function Settings({ workspace, onSaved }) {
             setProperties([
               ...properties,
               { key: uniqueKey(slugify(name), [...properties.map((p) => p.key), ...savedKeys]), name, type: 'text', tmp: `t${nextTmp++}` },
-            ])
-          }
-        />
-      </section>
-
-      <section>
-        <h3>Groups</h3>
-        <p className="muted small">
-          Teams of people. Each project can belong to one group, and its members are offered first when choosing owners for the project and its
-          to-dos. Removing a group leaves its projects without one.
-        </p>
-        {groups.map((g, i) => (
-          <div className="prop-def" key={keyOf(g, 'id')}>
-            <div className="settings-row">
-              <input value={g.name} onChange={(e) => setGroups(rename(groups, i, e.target.value, 'id', savedGroupIds))} aria-label="Group name" />
-              <button className="icon" onClick={() => setGroups(groups.filter((_, j) => j !== i))} title="Remove group">
-                ×
-              </button>
-            </div>
-            <div className="options">
-              {g.members.map((n) => (
-                <Tag key={n} onRemove={() => setGroup(i, { members: g.members.filter((m) => m !== n) })}>
-                  {n}
-                </Tag>
-              ))}
-              <AddInput placeholder="+ Person" onAdd={(v) => addMembers(i, v)} />
-            </div>
-          </div>
-        ))}
-        <AddInput
-          placeholder="+ Add group"
-          onAdd={(name) =>
-            setGroups([
-              ...groups,
-              { id: uniqueKey(slugify(name), [...groups.map((g) => g.id), ...savedGroupIds]), name, members: [], tmp: `t${nextTmp++}` },
             ])
           }
         />

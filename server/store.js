@@ -210,7 +210,7 @@ export class Store {
       properties: { priority: 'Medium' },
       subtasks: [
         { text: 'Open this project', done: true },
-        { text: 'Add a property under "Properties & columns"', done: false },
+        { text: 'Add a property under "Configuration"', done: false },
         { text: 'Drag this card to another column', done: false },
       ],
       body: [

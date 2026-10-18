@@ -52,8 +52,8 @@ properties:
     name: Summary
     type: text
 groups:
-  - id: integrations
-    name: Integrations
+  - id: it-integrations
+    name: IT Integrations
     members:
       - Cade
       - John

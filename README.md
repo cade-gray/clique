@@ -62,7 +62,7 @@ data/
 
 ### workspace.yaml
 
-`workspace.yaml` defines the shape of the board: which **columns** exist, which **properties** every project has, and the **groups** of people projects belong to. There is exactly one per workspace, and it is read fresh on every request, so hand edits show up on the next refresh. You can edit it in the app (**Properties, columns & groups**) or by hand.
+`workspace.yaml` defines the shape of the board: which **columns** exist, which **properties** every project has, and the **groups** of people projects belong to. There is exactly one per workspace, and it is read fresh on every request, so hand edits show up on the next refresh. You can edit it in the app (**Configuration**) or by hand.
 
 ```yaml
 columns:                  # left to right on the board; also the Status choices
@@ -92,8 +92,8 @@ properties:               # shown on every project, in this order
     type: date
 
 groups:                   # teams; each project can belong to one
-  - id: integrations      # stable id, stored in each project's `group`
-    name: Integrations    # the label people see; safe to rename any time
+  - id: it-integrations   # stable id, stored in each project's `group`
+    name: IT Integrations # the label people see; safe to rename any time
     members:              # offered first when choosing owners on the group's projects
       - Alex
       - Priya
@@ -158,7 +158,7 @@ Each project is a markdown file with YAML frontmatter. The properties from `work
 ---
 title: Website Redesign
 status: in-progress          # a column id from workspace.yaml
-group: integrations          # optional; a group id from workspace.yaml
+group: it-integrations       # optional; a group id from workspace.yaml
 order: 0                     # position within the column
 blocked: true                # optional; shows a red outline on the card
 blockedReason: Waiting on design sign-off
@@ -199,9 +199,9 @@ Property, status and to-do changes save immediately. Each property and the statu
 - **Status updates**: a comment-style timeline on each project (`updates` in the frontmatter, newest first, with an optional name). The latest update shows on the board card and in the list view and CSV.
 - **Blocked**: tick Blocked on a project to outline its card in red; an optional reason shows on the card (`blocked` / `blockedReason` in the frontmatter).
 - **Maintenance**: projects in the **Live** column have a Maintenance checkbox that outlines the card in yellow (`maintenance` in the frontmatter). A project that is both blocked and in maintenance gets a yellow outline with a red one around it. Moving a project out of Live hides the flag; it comes back if the project returns to Live.
-- **Groups**: define teams and their people under Properties, columns & groups. Pick a project's group when creating it on the board (the last one you used is preselected) or on the project page. Owner fields on the project and its to-dos then open a dropdown of that group's members; other people show up as you type, and any other name can still be typed in. The group shows on the card and as a column in the list view and CSV.
+- **Groups**: define teams and their people under Configuration. Pick a project's group when creating it on the board (the last one you used is preselected) or on the project page. Owner fields on the project and its to-dos then open a dropdown of that group's members; other people show up as you type, and any other name can still be typed in. The group shows on the card and as a column in the list view and CSV.
 - **To-dos**: check off, edit inline, drag to reorder, assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.)
-- **Global properties** (Properties, columns & groups screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
+- **Global properties** (Configuration screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
 - **Import from Microsoft Planner**: turn a Planner plan into projects, one per task. See below.
 - **Help page** (top bar): explains what Clique is for and what each board column means, using the board's own column and property names, so new team members can find their way around.
 

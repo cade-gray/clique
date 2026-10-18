@@ -12,7 +12,7 @@ import HelpView from './components/HelpView.jsx';
 //   #/list        list view (table + export)
 //   #/p/:id       project overview
 //   #/p/:id/:page page inside a project
-//   #/settings    columns, properties and groups
+//   #/settings    configuration: groups, project statuses and properties
 //   #/import      import from Microsoft Planner
 //   #/help        what Clique is for and how the board is used
 function parseHash() {
@@ -114,7 +114,7 @@ export default function App() {
             List view
           </a>
           <a href="#/settings" className={route.view === 'settings' ? 'active' : ''}>
-            Properties, columns &amp; groups
+            Configuration
           </a>
           <a href="#/import" className={route.view === 'import' ? 'active' : ''}>
             Import

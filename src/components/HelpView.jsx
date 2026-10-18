@@ -52,7 +52,7 @@ export default function HelpView({ workspace }) {
         <h3>What goes on a project</h3>
         <ul>
           <li>
-            <strong>Properties</strong> shared by every project ({workspace.properties.map((p) => p.name).join(', ') || 'set them up under Properties, columns & groups'}). They
+            <strong>Properties</strong> shared by every project ({workspace.properties.map((p) => p.name).join(', ') || 'set them up under Configuration'}). They
             show on the card, so the board doubles as an inventory of what has been built.
           </li>
           <li>
@@ -64,7 +64,7 @@ export default function HelpView({ workspace }) {
           </li>
           <li>
             A <strong>group</strong>: the team the solution belongs to. Groups and their people are set up under{' '}
-            <a href="#/settings">Properties, columns &amp; groups</a>; a project's group members are offered first when choosing owners.
+            <a href="#/settings">Configuration</a>; a project's group members are offered first when choosing owners.
           </li>
           <li>
             <strong>To-dos</strong> with owners. Checked-off items move to a history section rather than disappearing.
