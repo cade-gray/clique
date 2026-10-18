@@ -1,6 +1,6 @@
 // Markdown-on-disk storage. Layout under DATA_DIR:
 //
-//   workspace.yaml              board columns + globally defined properties
+//   workspace.yaml              board columns, globally defined properties, and groups of people
 //   projects/<id>/index.md      the project: frontmatter (status, properties, to-dos, updates) + overview body
 //   projects/<id>/<page>.md     extra pages inside the project
 //   projects/<id>/attachments/  images pasted into the project's pages, linked as attachments/<file>
@@ -13,7 +13,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import YAML from 'yaml';
 
-export const RESERVED_KEYS = ['title', 'status', 'order', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
+export const RESERVED_KEYS = ['title', 'status', 'order', 'group', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
 
 // The column for projects that are in production. Only projects here can be flagged as in maintenance.
 export const LIVE_STATUS = 'live';
@@ -241,6 +241,7 @@ export class Store {
       columns: Array.isArray(ws.columns) ? ws.columns : [],
       // `blocked` is built in now; drop an older custom property that used the same key.
       properties: (Array.isArray(ws.properties) ? ws.properties : []).filter((p) => !RESERVED_KEYS.includes(p.key)),
+      groups: normalizeGroups(ws.groups),
     };
   }
 
@@ -269,7 +270,15 @@ export class Store {
     if (new Set(properties.map((p) => p.key)).size !== properties.length)
       throw new HttpError(400, 'Property keys must be unique');
 
-    const ws = { columns, properties };
+    // A client that doesn't know about groups leaves them as they are.
+    const groups = (input.groups ?? (await this.getWorkspace()).groups).map((g) => ({
+      id: assertId(g.id, 'group id'),
+      name: String(g.name ?? g.id).trim().slice(0, 80) || g.id,
+      members: normalizePeople(g.members),
+    }));
+    if (new Set(groups.map((g) => g.id)).size !== groups.length) throw new HttpError(400, 'Group ids must be unique');
+
+    const ws = { columns, properties, groups };
     await withLock(this.workspaceFile, () => writeFileAtomic(this.workspaceFile, YAML.stringify(ws)));
     return ws;
   }
@@ -326,6 +335,8 @@ export class Store {
       id,
       title: data.title || id,
       status,
+      // A group that has since been deleted reads as no group.
+      group: ws.groups.some((g) => g.id === data.group) ? data.group : null,
       order: Number(data.order) || 0,
       properties: props,
       latestUpdate: updates.length ? updates[updates.length - 1] : null,
@@ -334,7 +345,8 @@ export class Store {
       blockedReason: data.blocked === true ? String(data.blockedReason ?? '') : '',
       // The flag stays in the file if the project leaves Live, and shows again if it comes back.
       maintenance: data.maintenance === true && status === LIVE_STATUS,
-      subtasks: { done: subtasks.filter((s) => s.done).length, total: subtasks.length },
+      // Everyone who owns a to-do, so views can filter by person without loading every to-do.
+      subtasks: { done: subtasks.filter((s) => s.done).length, total: subtasks.length, owners: normalizePeople(subtasks.flatMap((s) => s.owners ?? [])) },
       created: data.created ?? null,
       updated: data.updated ?? null,
     };
@@ -375,10 +387,11 @@ export class Store {
     return id;
   }
 
-  async createProject({ title, status }) {
+  async createProject({ title, status, group }) {
     title = String(title ?? '').trim() || 'Untitled project';
     const ws = await this.getWorkspace();
     if (!ws.columns.some((c) => c.id === status)) status = defaultStatus(ws);
+    if (group && !ws.groups.some((g) => g.id === group)) throw new HttpError(400, 'Unknown group');
     const id = await this.uniqueId(this.projectsDir, slugify(title));
     const siblings = (await this.listProjects()).filter((p) => p.status === status);
     const order = siblings.length ? Math.max(...siblings.map((p) => p.order)) + 1 : 0;
@@ -386,7 +399,7 @@ export class Store {
     const ts = now();
     await writeFileAtomic(
       this.projectFile(id),
-      stringifyMarkdown({ title, status, order, created: ts, updated: ts, subtasks: [] }, ''),
+      stringifyMarkdown({ title, status, ...(group ? { group } : {}), order, created: ts, updated: ts, subtasks: [] }, ''),
     );
     return this.getProject(id);
   }
@@ -411,6 +424,11 @@ export class Store {
         data.status = patch.status;
       }
       if (patch.order !== undefined) data.order = Number(patch.order) || 0;
+      if (patch.group !== undefined) {
+        if (!patch.group) delete data.group;
+        else if (!ws.groups.some((g) => g.id === patch.group)) throw new HttpError(400, 'Unknown group');
+        else data.group = patch.group;
+      }
       if (patch.blocked !== undefined) {
         if (patch.blocked) data.blocked = true;
         else {
@@ -581,6 +599,19 @@ function normalizeSubtasks(list) {
       if (owners.length) out.owners = owners;
       return out;
     });
+}
+
+// Hand-edited groups that can't be used (bad id, duplicate) are skipped rather than failing every request.
+function normalizeGroups(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const g of list) {
+    if (!g || typeof g !== 'object' || typeof g.id !== 'string' || !ID_RE.test(g.id) || seen.has(g.id)) continue;
+    seen.add(g.id);
+    out.push({ id: g.id, name: String(g.name ?? g.id).trim().slice(0, 80) || g.id, members: normalizePeople(g.members) });
+  }
+  return out;
 }
 
 // Owners are free-text names; trim, drop blanks and case-insensitive duplicates.

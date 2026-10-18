@@ -51,7 +51,7 @@ Clique is built for one board shared by one team. To keep your team's real data 
 
 ```
 data/
-  workspace.yaml                     board columns + global property definitions
+  workspace.yaml                     board columns, global property definitions, groups
   projects/
     website-redesign/
       index.md                       the project: frontmatter + overview page
@@ -62,7 +62,7 @@ data/
 
 ### workspace.yaml
 
-`workspace.yaml` defines the shape of the board: which **columns** exist and which **properties** every project has. There is exactly one per workspace, and it is read fresh on every request, so hand edits show up on the next refresh. You can edit it in the app (**Properties & columns**) or by hand.
+`workspace.yaml` defines the shape of the board: which **columns** exist, which **properties** every project has, and the **groups** of people projects belong to. There is exactly one per workspace, and it is read fresh on every request, so hand edits show up on the next refresh. You can edit it in the app (**Properties, columns & groups**) or by hand.
 
 ```yaml
 columns:                  # left to right on the board; also the Status choices
@@ -90,6 +90,13 @@ properties:               # shown on every project, in this order
   - key: due
     name: Go-live
     type: date
+
+groups:                   # teams; each project can belong to one
+  - id: integrations      # stable id, stored in each project's `group`
+    name: Integrations    # the label people see; safe to rename any time
+    members:              # offered first when choosing owners on the group's projects
+      - Alex
+      - Priya
 ```
 
 **Columns**
@@ -108,7 +115,7 @@ properties:               # shown on every project, in this order
 
 | Field | Rules |
 | --- | --- |
-| `key` | Same format as a column `id`, unique. It becomes a flat key in every project's frontmatter. It can't be one of the built-in keys: `title`, `status`, `order`, `subtasks`, `blocked`, `blockedReason`, `maintenance`, `updates`, `created`, `updated`. |
+| `key` | Same format as a column `id`, unique. It becomes a flat key in every project's frontmatter. It can't be one of the built-in keys: `title`, `status`, `order`, `group`, `subtasks`, `blocked`, `blockedReason`, `maintenance`, `updates`, `created`, `updated`. |
 | `name` | The label shown in the UI and the CSV, up to 80 characters. |
 | `type` | One of the types below. |
 | `options` | For `select` and `multi_select`: a list of `{ value, color }`. Colors: `gray`, `brown`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `red`. |
@@ -132,6 +139,17 @@ Things worth knowing when you change a property:
 - **Select options** are matched by their `value` text. Renaming or removing an option leaves the old value in projects that used it; it still displays, just without its color.
 - Saving from the app rewrites the file from scratch, so **YAML comments and custom formatting are lost**. If you keep notes in the file, edit by hand only, or keep them in a project page instead.
 
+**Groups**
+
+| Field | Rules |
+| --- | --- |
+| `id` | Same format as a column `id`, unique. Stored in each project as `group`, so don't change it once projects use it. |
+| `name` | The label shown on the project, the card and the list view, up to 80 characters. |
+| `members` | Names, as they appear in owner fields. Duplicates (ignoring case) are dropped. |
+
+- Removing a group leaves its projects without one; the old id stays in their files until the project is next given a group.
+- Owners are still stored as plain names. Removing someone from a group, or renaming them, doesn't change projects they already own.
+
 ### Project files
 
 Each project is a markdown file with YAML frontmatter. The properties from `workspace.yaml` sit alongside the built-in fields:
@@ -140,6 +158,7 @@ Each project is a markdown file with YAML frontmatter. The properties from `work
 ---
 title: Website Redesign
 status: in-progress          # a column id from workspace.yaml
+group: integrations          # optional; a group id from workspace.yaml
 order: 0                     # position within the column
 blocked: true                # optional; shows a red outline on the card
 blockedReason: Waiting on design sign-off
@@ -172,15 +191,17 @@ Property, status and to-do changes save immediately. Each property and the statu
 
 ## Features
 
-- **List view**: every project in a sortable table (status, blocked + reason, each property, to-do progress, last updated) with filters, and each project's to-dos (with owners) listed beneath it (toggle "Show to-dos"). **Export CSV** downloads exactly what is shown (opens in Excel/Sheets); with to-dos on, there is one row per to-do that repeats the project columns, so it can be filtered or pivoted, and **Print / PDF** gives a clean light-themed report for management.
-- **Board view**: columns are statuses; drag cards between and within columns; filter by title; card shows properties and to-do progress.
+- **Filters** (board and list view): **+ Filter** adds a filter on status, group, person (owns the project or one of its to-dos), flags (blocked / in maintenance), or any select, multi-select, people, checkbox or date property. Each filter is a chip with a checkbox per value and a count of matching projects; checking several values in one filter shows projects with any of them, and separate filters must all match. A status filter on the board hides the other columns. Filters are shared by both views and remembered in the browser.
+- **List view**: every project in a sortable table (status, group, blocked + reason, each property, to-do progress, last updated) with each project's to-dos (with owners) listed beneath it. **Columns** picks which columns show and whether to list to-dos, finished to-dos and to-do owners, so a report can be trimmed for management; the choice is remembered in the browser. **Export CSV** downloads exactly what is shown (opens in Excel/Sheets); with to-dos on, there is one row per to-do that repeats the project columns, so it can be filtered or pivoted. **Print / PDF** gives a clean light-themed report of the same, with a line saying which filters were applied.
+- **Board view**: columns are statuses; drag cards between and within columns (with filters on, a dropped card lands next to the visible card it was dropped by); search titles and filter as above; card shows properties and to-do progress.
 - **Project pages**: an overview plus any number of sub-pages from the sidebar.
 - **Editor** ([Milkdown Crepe](https://milkdown.dev)): live markdown, `/` menu for headings, lists, task lists, tables, quotes, code blocks (syntax highlighting, language picker, copy button), images and math.
 - **Status updates**: a comment-style timeline on each project (`updates` in the frontmatter, newest first, with an optional name). The latest update shows on the board card and in the list view and CSV.
 - **Blocked**: tick Blocked on a project to outline its card in red; an optional reason shows on the card (`blocked` / `blockedReason` in the frontmatter).
 - **Maintenance**: projects in the **Live** column have a Maintenance checkbox that outlines the card in yellow (`maintenance` in the frontmatter). A project that is both blocked and in maintenance gets a yellow outline with a red one around it. Moving a project out of Live hides the flag; it comes back if the project returns to Live.
+- **Groups**: define teams and their people under Properties, columns & groups. Pick a project's group when creating it on the board (the last one you used is preselected) or on the project page. Owner fields on the project and its to-dos then open a dropdown of that group's members; other people show up as you type, and any other name can still be typed in. The group shows on the card and as a column in the list view and CSV.
 - **To-dos**: check off, edit inline, drag to reorder, assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.)
-- **Global properties** (Properties & columns screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
+- **Global properties** (Properties, columns & groups screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
 - **Import from Microsoft Planner**: turn a Planner plan into projects, one per task. See below.
 - **Help page** (top bar): explains what Clique is for and what each board column means, using the board's own column and property names, so new team members can find their way around.
 

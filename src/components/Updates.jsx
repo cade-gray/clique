@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { api } from '../api.js';
-import { PEOPLE_LIST_ID, formatDateTime, timeAgo } from './props.jsx';
+import { PeopleContext, formatDateTime, timeAgo } from './props.jsx';
 
 const AUTHOR_KEY = 'clique-author';
+const AUTHOR_LIST_ID = 'update-author-suggestions';
 
 function savedAuthor() {
   try {
@@ -18,6 +19,7 @@ export default function Updates({ projectId, updates, onChange }) {
   const [author, setAuthor] = useState(savedAuthor);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const people = useContext(PeopleContext);
 
   async function post() {
     const body = text.trim();
@@ -63,11 +65,16 @@ export default function Updates({ projectId, updates, onChange }) {
         <div className="update-form-row">
           <input
             className="update-author"
-            list={PEOPLE_LIST_ID}
+            list={AUTHOR_LIST_ID}
             value={author}
             placeholder="Your name"
             onChange={(e) => setAuthor(e.target.value)}
           />
+          <datalist id={AUTHOR_LIST_ID}>
+            {[...people.members, ...people.others].map((n) => (
+              <option key={n} value={n} />
+            ))}
+          </datalist>
           <span className="muted small">Ctrl/⌘ + Enter to post</span>
           <button className="primary" onClick={post} disabled={!text.trim() || busy}>
             Post update

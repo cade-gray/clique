@@ -1,6 +1,7 @@
 ---
 title: ITSM ↔ Core Banking incident sync
 status: live
+group: it-core
 order: 0
 created: 2026-10-16T02:32:36.227Z
 updated: 2026-10-16T02:32:36.233Z

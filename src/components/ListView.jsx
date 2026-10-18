@@ -1,8 +1,35 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
+import { describeFilters, filterFields, matches } from '../filters.js';
+import FilterBar from './FilterBar.jsx';
+import Popover from './Popover.jsx';
 import { PropertyValue, Tag, formatDate, formatDateTime, isEmpty, timeAgo, toPeople } from './props.jsx';
 
 const POLL_MS = 10000;
+
+// What the list shows (and so what CSV and print include), remembered in this browser.
+const VIEW_KEY = 'clique-list-view';
+const DEFAULT_VIEW = { hidden: [], todos: true, doneTodos: true, todoOwners: true };
+function useListView() {
+  const [view, setView] = useState(() => {
+    try {
+      return { ...DEFAULT_VIEW, ...JSON.parse(localStorage.getItem(VIEW_KEY)) };
+    } catch {
+      return DEFAULT_VIEW;
+    }
+  });
+  const update = (fields) =>
+    setView((v) => {
+      const next = { ...v, ...fields };
+      try {
+        localStorage.setItem(VIEW_KEY, JSON.stringify(next));
+      } catch {
+        // storage unavailable; the choice just won't be remembered
+      }
+      return next;
+    });
+  return [view, update];
+}
 
 // Plain-text form of a property value, used for sorting and for the CSV export.
 function plain(def, value) {
@@ -29,13 +56,13 @@ function download(name, text) {
   URL.revokeObjectURL(url);
 }
 
-export default function ListView({ workspace }) {
+export default function ListView({ workspace, filters, onFilters }) {
   const [projects, setProjects] = useState(null);
   const [query, setQuery] = useState('');
-  const [status, setStatus] = useState('');
-  const [blockedOnly, setBlockedOnly] = useState(false);
-  const [showSubtasks, setShowSubtasks] = useState(true);
+  const [view, setView] = useListView();
   const [sort, setSort] = useState({ id: 'status', dir: 1 });
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const columnsRef = useRef(null);
 
   useEffect(() => {
     const load = () => api.projects({ subtasks: true }).then(setProjects).catch(() => {});
@@ -50,12 +77,14 @@ export default function ListView({ workspace }) {
 
   const statusIndex = (p) => workspace.columns.findIndex((c) => c.id === p.status);
   const statusName = (p) => workspace.columns.find((c) => c.id === p.status)?.name ?? '';
+  const groupName = (p) => workspace.groups.find((g) => g.id === p.group)?.name ?? '';
   const progress = (p) => (p.subtasks.total ? p.subtasks.done / p.subtasks.total : null);
 
-  const columns = useMemo(
+  const allColumns = useMemo(
     () => [
       { id: 'title', label: 'Project', sort: (p) => p.title.toLowerCase(), text: (p) => p.title },
       { id: 'status', label: 'Status', sort: statusIndex, text: statusName },
+      ...(workspace.groups.length ? [{ id: 'group', label: 'Group', sort: (p) => groupName(p).toLowerCase(), text: groupName }] : []),
       {
         id: 'blocked',
         label: 'Blocked',
@@ -94,16 +123,15 @@ export default function ListView({ workspace }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [workspace],
   );
+  // The project name is always shown; everything else can be hidden.
+  const columns = useMemo(() => allColumns.filter((c) => c.id === 'title' || !view.hidden.includes(c.id)), [allColumns, view.hidden]);
+  const fields = useMemo(() => filterFields(workspace, projects ?? []), [workspace, projects]);
+  const todosOf = (p) => (view.doneTodos ? (p.subtasks.items ?? []) : (p.subtasks.items ?? []).filter((t) => !t.done));
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const col = columns.find((c) => c.id === sort.id) ?? columns[0];
-    const list = (projects ?? []).filter(
-      (p) =>
-        (!q || p.title.toLowerCase().includes(q) || columns.some((c) => c.text(p).toLowerCase().includes(q))) &&
-        (!status || p.status === status) &&
-        (!blockedOnly || p.blocked),
-    );
+    const list = (projects ?? []).filter((p) => (!q || allColumns.some((c) => c.text(p).toLowerCase().includes(q))) && matches(p, filters, fields));
     // Empty values always sort last, whichever direction is chosen.
     return list.sort((a, b) => {
       const x = col.sort(a);
@@ -113,7 +141,7 @@ export default function ListView({ workspace }) {
       if (xe || ye) return xe === ye ? 0 : xe ? 1 : -1;
       return (x < y ? -1 : x > y ? 1 : 0) * sort.dir || a.title.localeCompare(b.title);
     });
-  }, [projects, columns, query, status, blockedOnly, sort]);
+  }, [projects, columns, allColumns, query, filters, fields, sort]);
 
   function exportCsv() {
     const header = [];
@@ -123,7 +151,7 @@ export default function ListView({ workspace }) {
       if (c.id === 'subtasks') header.push('To-dos done', 'To-dos total', 'Progress');
       if (c.extra) header.push('Latest update by', 'Latest update date');
     }
-    if (showSubtasks) header.push('To-do', 'To-do status', 'To-do owners');
+    if (view.todos) header.push('To-do', 'To-do status', ...(view.todoOwners ? ['To-do owners'] : []));
     const lines = [header.map((h) => csvCell(h, false))];
     for (const p of rows) {
       const cells = [];
@@ -139,12 +167,11 @@ export default function ListView({ workspace }) {
       }
       // With to-dos on, each to-do gets its own row that repeats the project columns,
       // so the file can be filtered and pivoted by project. A project without to-dos is one row.
-      const items = showSubtasks ? p.subtasks.items ?? [] : [];
-      if (!showSubtasks) lines.push(cells);
-      else if (items.length === 0) lines.push([...cells, '', '', '']);
-      else
-        for (const t of items)
-          lines.push([...cells, csvCell(t.text), t.done ? 'Done' : 'Open', csvCell(toPeople(t.owners).join(', '))]);
+      const items = view.todos ? todosOf(p) : [];
+      const todoCells = (t) => [csvCell(t.text), t.done ? 'Done' : 'Open', ...(view.todoOwners ? [csvCell(toPeople(t.owners).join(', '))] : [])];
+      if (!view.todos) lines.push(cells);
+      else if (items.length === 0) lines.push([...cells, ...todoCells({ text: '' }).map(() => '')]);
+      else for (const t of items) lines.push([...cells, ...todoCells(t)]);
     }
     const day = new Date().toISOString().slice(0, 10);
     download(`clique-projects-${day}.csv`, lines.map((l) => l.join(',')).join('\r\n') + '\r\n');
@@ -157,31 +184,59 @@ export default function ListView({ workspace }) {
   return (
     <div className="list-wrap">
       <div className="board-toolbar list-toolbar">
-        <input className="search" placeholder="Filter projects…" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by status">
-          <option value="">All statuses</option>
-          {workspace.columns.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <label className="check">
-          <input type="checkbox" checked={blockedOnly} onChange={(e) => setBlockedOnly(e.target.checked)} /> Blocked only
-        </label>
-        <label className="check">
-          <input type="checkbox" checked={showSubtasks} onChange={(e) => setShowSubtasks(e.target.checked)} /> Show to-dos
-        </label>
+        <input className="search" placeholder="Search…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <FilterBar fields={fields} projects={projects} filters={filters} onChange={onFilters} />
         <span className="muted">
           {rows.length === projects.length ? `${projects.length} projects` : `${rows.length} of ${projects.length} projects`}
           {blockedCount > 0 && ` · ${blockedCount} blocked`}
         </span>
         <span className="spacer" />
+        <span className="filter-anchor">
+          <button ref={columnsRef} className="toolbar-btn" onClick={() => setColumnsOpen((o) => !o)} aria-expanded={columnsOpen}>
+            Columns{view.hidden.length > 0 && ` (${columns.length}/${allColumns.length})`} ▾
+          </button>
+          {columnsOpen && (
+            <Popover anchor={columnsRef} onClose={() => setColumnsOpen(false)} align="right" className="columns-menu">
+              <div className="popover-label">Columns</div>
+              <p className="muted small popover-note">What's shown here is also what Export CSV and Print include.</p>
+              {allColumns.map((c) => (
+                <label key={c.id} className={`popover-item check ${c.id === 'title' ? 'muted' : ''}`}>
+                  <input
+                    type="checkbox"
+                    disabled={c.id === 'title'}
+                    checked={c.id === 'title' || !view.hidden.includes(c.id)}
+                    onChange={(e) => setView({ hidden: e.target.checked ? view.hidden.filter((h) => h !== c.id) : [...view.hidden, c.id] })}
+                  />
+                  {c.label}
+                </label>
+              ))}
+              <div className="popover-label">To-dos</div>
+              <label className="popover-item check">
+                <input type="checkbox" checked={view.todos} onChange={(e) => setView({ todos: e.target.checked })} />
+                List to-dos under each project
+              </label>
+              <label className={`popover-item check ${view.todos ? '' : 'muted'}`}>
+                <input type="checkbox" disabled={!view.todos} checked={view.doneTodos} onChange={(e) => setView({ doneTodos: e.target.checked })} />
+                Include finished to-dos
+              </label>
+              <label className={`popover-item check ${view.todos ? '' : 'muted'}`}>
+                <input type="checkbox" disabled={!view.todos} checked={view.todoOwners} onChange={(e) => setView({ todoOwners: e.target.checked })} />
+                Show to-do owners
+              </label>
+              <div className="popover-foot">
+                <button className="link" onClick={() => setView(DEFAULT_VIEW)}>
+                  Show everything
+                </button>
+              </div>
+            </Popover>
+          )}
+        </span>
         <button onClick={() => window.print()}>Print / PDF</button>
         <button className="primary" onClick={exportCsv} disabled={rows.length === 0}>
           Export CSV
         </button>
       </div>
+      {describeFilters(filters, fields) && <p className="muted small print-only print-filters">Filtered to {describeFilters(filters, fields)}</p>}
       <div className="list-scroll">
         <table className="list">
           <thead>
@@ -197,36 +252,37 @@ export default function ListView({ workspace }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((p) => (
-              <Fragment key={p.id}>
-                <tr className={`project-row ${p.blocked ? 'blocked' : ''} ${p.maintenance ? 'maintenance' : ''} ${showSubtasks && p.subtasks.total ? 'has-subtasks' : ''}`}>
-                  {columns.map((c) => (
-                    <td key={c.id} className={`col-${c.id.replace(/\W/g, '-')}`}>
-                      <Cell c={c} p={p} columns={workspace.columns} />
-                    </td>
-                  ))}
-                </tr>
-                {showSubtasks && p.subtasks.total > 0 && (
-                  <tr className="subtask-row">
-                    <td colSpan={columns.length}>
-                      <ul className="list-subtasks">
-                        {p.subtasks.items.map((t, i) => (
-                          <li key={i} className={t.done ? 'done' : ''}>
-                            <span className="box" aria-label={t.done ? 'Done' : 'Open'}>
-                              {t.done ? '☑' : '☐'}
-                            </span>
-                            <span className="text">{t.text}</span>
-                            {toPeople(t.owners).map((n) => (
-                              <Tag key={n}>{n}</Tag>
-                            ))}
-                          </li>
-                        ))}
-                      </ul>
-                    </td>
+            {rows.map((p) => {
+              const todos = view.todos ? todosOf(p) : [];
+              return (
+                <Fragment key={p.id}>
+                  <tr className={`project-row ${p.blocked ? 'blocked' : ''} ${p.maintenance ? 'maintenance' : ''} ${todos.length ? 'has-subtasks' : ''}`}>
+                    {columns.map((c) => (
+                      <td key={c.id} className={`col-${c.id.replace(/\W/g, '-')}`}>
+                        <Cell c={c} p={p} workspace={workspace} />
+                      </td>
+                    ))}
                   </tr>
-                )}
-              </Fragment>
-            ))}
+                  {todos.length > 0 && (
+                    <tr className="subtask-row">
+                      <td colSpan={columns.length}>
+                        <ul className="list-subtasks">
+                          {todos.map((t, i) => (
+                            <li key={i} className={t.done ? 'done' : ''}>
+                              <span className="box" aria-label={t.done ? 'Done' : 'Open'}>
+                                {t.done ? '☑' : '☐'}
+                              </span>
+                              <span className="text">{t.text}</span>
+                              {view.todoOwners && toPeople(t.owners).map((n) => <Tag key={n}>{n}</Tag>)}
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
             {rows.length === 0 && (
               <tr>
                 <td colSpan={columns.length} className="muted empty">
@@ -242,9 +298,10 @@ export default function ListView({ workspace }) {
   );
 }
 
-function Cell({ c, p, columns }) {
+function Cell({ c, p, workspace }) {
   if (c.id === 'title') return <a href={`#/p/${encodeURIComponent(p.id)}`}>{p.title}</a>;
-  if (c.id === 'status') return <Tag>{columns.find((x) => x.id === p.status)?.name ?? ''}</Tag>;
+  if (c.id === 'status') return <Tag>{workspace.columns.find((x) => x.id === p.status)?.name ?? ''}</Tag>;
+  if (c.id === 'group') return c.text(p);
   if (c.id === 'blocked')
     return p.blocked ? (
       <div className="blocked-cell">

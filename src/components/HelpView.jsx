@@ -52,7 +52,7 @@ export default function HelpView({ workspace }) {
         <h3>What goes on a project</h3>
         <ul>
           <li>
-            <strong>Properties</strong> shared by every project ({workspace.properties.map((p) => p.name).join(', ') || 'set them up under Properties & columns'}). They
+            <strong>Properties</strong> shared by every project ({workspace.properties.map((p) => p.name).join(', ') || 'set them up under Properties, columns & groups'}). They
             show on the card, so the board doubles as an inventory of what has been built.
           </li>
           <li>
@@ -61,6 +61,10 @@ export default function HelpView({ workspace }) {
           </li>
           <li>
             <strong>Status updates</strong>: a dated record of decisions and progress. The latest one shows on the card.
+          </li>
+          <li>
+            A <strong>group</strong>: the team the solution belongs to. Groups and their people are set up under{' '}
+            <a href="#/settings">Properties, columns &amp; groups</a>; a project's group members are offered first when choosing owners.
           </li>
           <li>
             <strong>To-dos</strong> with owners. Checked-off items move to a history section rather than disappearing.
@@ -75,7 +79,11 @@ export default function HelpView({ workspace }) {
         <h3>Good to know</h3>
         <ul>
           <li>
-            <a href="#/list">List view</a> gives a sortable table of every project, with CSV export and a print layout for reports and audits.
+            <a href="#/list">List view</a> gives a sortable table of every project, with CSV export and a print layout for reports and audits. Use{' '}
+            <strong>Columns</strong> to leave out detail management doesn't need.
+          </li>
+          <li>
+            <strong>+ Filter</strong> on the board and list narrows them down by group, person, status, flags or any property. The same filters apply to both views.
           </li>
           <li>
             Existing work in Microsoft Planner can be brought in from <a href="#/import">Import</a>.

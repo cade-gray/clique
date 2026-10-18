@@ -1,5 +1,7 @@
 // Display and edit helpers for the globally defined properties.
 
+import { createContext, useContext, useState } from 'react';
+
 export const COLORS = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
 
 export const TYPE_LABELS = {
@@ -35,17 +37,55 @@ export function toPeople(v) {
   return Array.isArray(v) ? v : isEmpty(v) ? [] : [String(v)];
 }
 
-export const PEOPLE_LIST_ID = 'people-suggestions';
+// Who to offer when picking people. `members` (the project's group, or everyone when the project
+// has no group) are listed as soon as the box is focused; `others` only once something is typed.
+export const PeopleContext = createContext({ label: '', members: [], others: [] });
 
-// Chips plus a text box; Enter or comma adds a name. Suggestions come from a shared <datalist>.
+// Chips plus a text box with a dropdown of suggestions. Enter or comma adds what's typed,
+// so names outside the list are still allowed.
 export function PeopleInput({ value, onChange, placeholder = '+ Add person' }) {
   const list = toPeople(value);
-  const add = (input) => {
-    const names = input.value.split(',').map((n) => n.trim()).filter(Boolean);
-    input.value = '';
-    const fresh = names.filter((n, i) => !list.some((x) => x.toLowerCase() === n.toLowerCase()) && names.findIndex((m) => m.toLowerCase() === n.toLowerCase()) === i);
+  const { label, members, others } = useContext(PeopleContext);
+  const [text, setText] = useState('');
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+
+  const q = text.trim().toLowerCase();
+  const taken = new Set(list.map((n) => n.toLowerCase()));
+  const fits = (n) => !taken.has(n.toLowerCase()) && (!q || n.toLowerCase().includes(q));
+  const memberItems = members.filter(fits);
+  const otherItems = q ? others.filter(fits) : [];
+  const known = [...members, ...others].some((n) => n.toLowerCase() === q) || taken.has(q);
+  const items = [...memberItems, ...otherItems, ...(q && !known ? [text.trim()] : [])];
+  const show = open && items.length > 0;
+
+  const addNames = (names) => {
+    const fresh = names.filter(
+      (n, i) => !taken.has(n.toLowerCase()) && names.findIndex((m) => m.toLowerCase() === n.toLowerCase()) === i,
+    );
     if (fresh.length) onChange([...list, ...fresh]);
+    setText('');
+    setActive(-1);
   };
+  const addTyped = () => addNames(text.split(',').map((n) => n.trim()).filter(Boolean));
+
+  const option = (n, i, extra = '') => (
+    <li
+      key={`${extra}${n}`}
+      role="option"
+      aria-selected={i === active}
+      className={i === active ? 'active' : ''}
+      // mousedown, so the click lands before the box loses focus
+      onMouseDown={(e) => {
+        e.preventDefault();
+        addNames([n]);
+      }}
+      onMouseEnter={() => setActive(i)}
+    >
+      {extra ? `Add "${n}"` : n}
+    </li>
+  );
+
   return (
     <div className="multi">
       {list.map((n) => (
@@ -53,18 +93,51 @@ export function PeopleInput({ value, onChange, placeholder = '+ Add person' }) {
           {n}
         </Tag>
       ))}
-      <input
-        className="people-add"
-        list={PEOPLE_LIST_ID}
-        placeholder={placeholder}
-        onBlur={(e) => add(e.target)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ',') {
-            e.preventDefault();
-            add(e.currentTarget);
-          }
-        }}
-      />
+      <span className="people-picker">
+        <input
+          className="people-add"
+          placeholder={placeholder}
+          value={text}
+          role="combobox"
+          aria-expanded={show}
+          onChange={(e) => {
+            setText(e.target.value);
+            setOpen(true);
+            setActive(e.target.value.trim() ? 0 : -1);
+          }}
+          onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
+          onBlur={() => {
+            setOpen(false);
+            addTyped();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              e.preventDefault();
+              setOpen(true);
+              if (items.length) setActive((a) => (e.key === 'ArrowDown' ? (a + 1) % items.length : a <= 0 ? items.length - 1 : a - 1));
+            } else if (e.key === 'Enter') {
+              e.preventDefault();
+              if (show && items[active] !== undefined) addNames([items[active]]);
+              else addTyped();
+            } else if (e.key === ',') {
+              e.preventDefault();
+              addTyped();
+            } else if (e.key === 'Escape') {
+              setOpen(false);
+            }
+          }}
+        />
+        {show && (
+          <ul className="people-menu" role="listbox">
+            {memberItems.length > 0 && label && <li className="people-menu-label">{label}</li>}
+            {memberItems.map((n, i) => option(n, i))}
+            {otherItems.length > 0 && <li className="people-menu-label">Others</li>}
+            {otherItems.map((n, i) => option(n, memberItems.length + i))}
+            {items.length > memberItems.length + otherItems.length && option(text.trim(), items.length - 1, '+')}
+          </ul>
+        )}
+      </span>
     </div>
   );
 }

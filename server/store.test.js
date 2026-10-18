@@ -98,6 +98,8 @@ test('projects and subtasks can have multiple owners', async () => {
   const got = await store.getProject(p.id);
   assert.deepEqual(got.properties.owner, ['Cade', 'Sam']);
   assert.deepEqual(got.subtasks, [{ text: 'a', done: false, owners: ['Ann', 'Bo'] }, { text: 'b', done: false }]);
+  // Board summaries carry the to-do owners for filtering by person.
+  assert.deepEqual((await store.listProjects()).find((x) => x.id === p.id).subtasks, { done: 0, total: 2, owners: ['Ann', 'Bo'] });
   await store.updateProject(p.id, { properties: { owner: [] } });
   assert.equal((await store.getProject(p.id)).properties.owner, undefined);
 });
@@ -142,6 +144,7 @@ test('listProjects can include full subtasks', async () => {
   assert.deepEqual(full.subtasks, {
     done: 1,
     total: 2,
+    owners: ['Ann'],
     items: [{ text: 'a', done: true, owners: ['Ann'] }, { text: 'b', done: false }],
   });
 });
@@ -234,4 +237,31 @@ test('a workspace with a done column is migrated to live + graveyard on start', 
   await store.saveWorkspace({ ...(await store.getWorkspace()), columns: [...(await store.getWorkspace()).columns, { id: 'done', name: 'Done' }] });
   await store.init();
   assert.equal((await store.getWorkspace()).columns.filter((c) => c.id === 'done').length, 1);
+});
+
+test('groups are saved with the workspace and projects can belong to one', async () => {
+  const store = await freshStore();
+  const ws = await store.getWorkspace();
+  assert.deepEqual(ws.groups, []);
+
+  const saved = await store.saveWorkspace({ ...ws, groups: [{ id: 'integrations', name: ' Integrations ', members: ['Alex', ' alex ', 'Priya', ''] }] });
+  assert.deepEqual(saved.groups, [{ id: 'integrations', name: 'Integrations', members: ['Alex', 'Priya'] }]);
+  // Saving without groups (an older client) keeps the ones already there.
+  await store.saveWorkspace({ columns: ws.columns, properties: ws.properties });
+  assert.equal((await store.getWorkspace()).groups.length, 1);
+  await assert.rejects(store.saveWorkspace({ ...ws, groups: [{ id: 'a' }, { id: 'a' }] }), (e) => e.status === 400);
+  await assert.rejects(store.saveWorkspace({ ...ws, groups: [{ id: '../x' }] }), (e) => e.status === 400);
+
+  const p = await store.createProject({ title: 'Grouped', group: 'integrations' });
+  assert.equal(p.group, 'integrations');
+  assert.equal((await store.createProject({ title: 'Loose' })).group, null);
+  await assert.rejects(store.createProject({ title: 'Bad', group: 'nope' }), (e) => e.status === 400);
+  await assert.rejects(store.updateProject(p.id, { group: 'nope' }), (e) => e.status === 400);
+  assert.equal((await store.updateProject(p.id, { group: '' })).group, null);
+  await store.updateProject(p.id, { group: 'integrations' });
+
+  // Deleting the group leaves the project without one; the stale id in the file is ignored.
+  await store.saveWorkspace({ ...ws, groups: [] });
+  assert.equal((await store.getProject(p.id)).group, null);
+  assert.equal((await store.listProjects()).find((x) => x.id === p.id).group, null);
 });

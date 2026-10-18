@@ -1,6 +1,7 @@
 ---
 title: Data warehouse regulatory reporting feed
 status: backlog
+group: integrations
 order: 1
 created: 2026-10-16T02:32:36.287Z
 updated: 2026-10-16T02:32:36.289Z
