@@ -86,6 +86,11 @@ export default function HelpView({ workspace }) {
             <strong>+ Filter</strong> on the board and list narrows them down by group, person, status, flags or any property. The same filters apply to both views.
           </li>
           <li>
+            <a href="#/stats">Stats</a> covers the whole board: how much is active and live, how long things take to go live, and what each group is
+            carrying, then what is blocked, overdue or going quiet. Delivery figures only count moves recorded from the day the history log started, so
+            they fill in over time.
+          </li>
+          <li>
             Existing work in Microsoft Planner can be brought in from <a href="#/import">Import</a>.
           </li>
           <li>Deleting a project or page moves it to a trash folder on the server; it can be restored from there.</li>

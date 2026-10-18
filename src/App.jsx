@@ -6,10 +6,12 @@ import ProjectView from './components/ProjectView.jsx';
 import Settings from './components/Settings.jsx';
 import ImportView from './components/ImportView.jsx';
 import HelpView from './components/HelpView.jsx';
+import StatsView from './components/StatsView.jsx';
 
 // Hash routes keep deep links working on IIS without URL rewrite rules:
 //   #/            board view
 //   #/list        list view (table + export)
+//   #/stats       portfolio figures and what needs attention
 //   #/p/:id       project overview
 //   #/p/:id/:page page inside a project
 //   #/settings    configuration: groups, project statuses and properties
@@ -19,6 +21,7 @@ function parseHash() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
   if (parts[0] === 'p' && parts[1]) return { view: 'project', id: parts[1], page: parts[2] || null };
   if (parts[0] === 'list') return { view: 'list' };
+  if (parts[0] === 'stats') return { view: 'stats' };
   if (parts[0] === 'settings') return { view: 'settings' };
   if (parts[0] === 'import') return { view: 'import' };
   if (parts[0] === 'help') return { view: 'help' };
@@ -113,6 +116,9 @@ export default function App() {
           <a href="#/list" className={route.view === 'list' ? 'active' : ''}>
             List view
           </a>
+          <a href="#/stats" className={route.view === 'stats' ? 'active' : ''}>
+            Stats
+          </a>
           <a href="#/settings" className={route.view === 'settings' ? 'active' : ''}>
             Configuration
           </a>
@@ -131,6 +137,7 @@ export default function App() {
         {error && <div className="banner error">Could not reach the server: {error.message}</div>}
         {workspace && route.view === 'board' && <Board workspace={workspace} filters={filters} onFilters={setFilters} />}
         {workspace && route.view === 'list' && <ListView workspace={workspace} filters={filters} onFilters={setFilters} />}
+        {workspace && route.view === 'stats' && <StatsView workspace={workspace} />}
         {workspace && route.view === 'project' && (
           <ProjectView key={route.id} id={route.id} pageId={route.page} workspace={workspace} />
         )}

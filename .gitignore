@@ -1,6 +1,8 @@
 node_modules/
 dist/
 data/.trash/
+# Per-deployment history, not example data: rebuilt by backfill on first run elsewhere.
+data/events.ndjson
 iisnode/
 *.tmp
 # keep the empty logs folder so IIS (HttpPlatformHandler) has somewhere to write node.log
