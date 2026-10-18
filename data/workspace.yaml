@@ -51,3 +51,24 @@ properties:
   - key: summary
     name: Summary
     type: text
+groups:
+  - id: it-integrations
+    name: IT Integrations
+    members:
+      - Cade
+      - John
+  - id: it-core
+    name: IT Core
+    members:
+      - Ron
+      - Ginger
+  - id: it-cards
+    name: IT Cards
+    members:
+      - Mason
+      - Jacob
+  - id: it-lending
+    name: IT Lending
+    members:
+      - Jordan
+      - Talitha

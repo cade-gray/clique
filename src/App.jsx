@@ -12,7 +12,7 @@ import HelpView from './components/HelpView.jsx';
 //   #/list        list view (table + export)
 //   #/p/:id       project overview
 //   #/p/:id/:page page inside a project
-//   #/settings    columns and properties
+//   #/settings    configuration: groups, project statuses and properties
 //   #/import      import from Microsoft Planner
 //   #/help        what Clique is for and how the board is used
 function parseHash() {
@@ -56,6 +56,28 @@ function useTheme() {
   return [theme, () => apply(theme === 'dark' ? 'light' : 'dark', true)];
 }
 
+// Board and list share one set of filters, remembered in this browser between visits.
+const FILTERS_KEY = 'clique-filters';
+function useFilters() {
+  const [filters, setFilters] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(FILTERS_KEY));
+      return Array.isArray(saved) ? saved.filter((f) => f && typeof f.field === 'string' && Array.isArray(f.values)) : [];
+    } catch {
+      return [];
+    }
+  });
+  const update = useCallback((next) => {
+    setFilters(next);
+    try {
+      localStorage.setItem(FILTERS_KEY, JSON.stringify(next));
+    } catch {
+      // storage unavailable; the filters just won't be remembered
+    }
+  }, []);
+  return [filters, update];
+}
+
 export function navigate(hash) {
   window.location.hash = hash;
 }
@@ -65,6 +87,7 @@ export default function App() {
   const [workspace, setWorkspace] = useState(null);
   const [error, setError] = useState(null);
   const [theme, toggleTheme] = useTheme();
+  const [filters, setFilters] = useFilters();
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash());
@@ -91,7 +114,7 @@ export default function App() {
             List view
           </a>
           <a href="#/settings" className={route.view === 'settings' ? 'active' : ''}>
-            Properties &amp; columns
+            Configuration
           </a>
           <a href="#/import" className={route.view === 'import' ? 'active' : ''}>
             Import
@@ -106,8 +129,8 @@ export default function App() {
       </header>
       <main>
         {error && <div className="banner error">Could not reach the server: {error.message}</div>}
-        {workspace && route.view === 'board' && <Board workspace={workspace} />}
-        {workspace && route.view === 'list' && <ListView workspace={workspace} />}
+        {workspace && route.view === 'board' && <Board workspace={workspace} filters={filters} onFilters={setFilters} />}
+        {workspace && route.view === 'list' && <ListView workspace={workspace} filters={filters} onFilters={setFilters} />}
         {workspace && route.view === 'project' && (
           <ProjectView key={route.id} id={route.id} pageId={route.page} workspace={workspace} />
         )}

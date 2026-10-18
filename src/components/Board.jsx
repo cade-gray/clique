@@ -1,11 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { navigate } from '../App.jsx';
+import { activeFilters, filterFields, matches } from '../filters.js';
+import FilterBar from './FilterBar.jsx';
 import { PropertyValue, formatDateTime, isEmpty, timeAgo } from './props.jsx';
 
 const POLL_MS = 10000;
+const GROUP_KEY = 'newProjectGroup';
 
-export default function Board({ workspace }) {
+// New projects start in the group picked last time, as a per-browser convenience.
+function lastGroup(groups) {
+  let saved = null;
+  try {
+    saved = localStorage.getItem(GROUP_KEY);
+  } catch {
+    // storage unavailable
+  }
+  if (saved === '' || groups.some((g) => g.id === saved)) return saved;
+  return groups[0]?.id ?? '';
+}
+
+export default function Board({ workspace, filters, onFilters }) {
   const [projects, setProjects] = useState(null);
   const [query, setQuery] = useState('');
   const [drag, setDrag] = useState(null); // { id, over: { status, index } }
@@ -24,26 +39,39 @@ export default function Board({ workspace }) {
     };
   }, [load]);
 
+  const fields = useMemo(() => filterFields(workspace, projects ?? []), [workspace, projects]);
   const columns = useMemo(() => {
-    const cols = workspace.columns.map((c) => ({ ...c, items: [] }));
+    // A status filter hides the other columns rather than showing them empty.
+    const statuses = activeFilters(filters, fields).find((f) => f.field === 'status')?.values;
+    const cols = workspace.columns.filter((c) => !statuses || statuses.includes(c.id)).map((c) => ({ ...c, items: [] }));
     const q = query.trim().toLowerCase();
     for (const p of projects ?? []) {
       if (q && !p.title.toLowerCase().includes(q)) continue;
+      if (!matches(p, filters, fields)) continue;
       cols.find((c) => c.id === p.status)?.items.push(p);
     }
     for (const c of cols) c.items.sort((a, b) => a.order - b.order);
     return cols;
-  }, [workspace.columns, projects, query]);
+  }, [workspace.columns, projects, query, filters, fields]);
+  const shownCount = columns.reduce((n, c) => n + c.items.length, 0);
 
   async function drop(status) {
     if (!drag?.over) return setDrag(null);
     const col = columns.find((c) => c.id === status);
-    const ids = col.items.map((p) => p.id).filter((id) => id !== drag.id);
     // When reordering inside the same column, the dragged card's old slot shifts the index.
     let index = drag.over.index;
     const oldIndex = col.items.findIndex((p) => p.id === drag.id);
     if (oldIndex !== -1 && oldIndex < index) index--;
-    ids.splice(index, 0, drag.id);
+    // Place the card among every project in the column, including ones hidden by a search or
+    // filter: just before the visible card it was dropped on, or just after the last visible one.
+    const visible = col.items.filter((p) => p.id !== drag.id);
+    const all = projects
+      .filter((p) => p.status === status && p.id !== drag.id)
+      .sort((a, b) => a.order - b.order)
+      .map((p) => p.id);
+    const pos = visible[index] ? all.indexOf(visible[index].id) : visible.length ? all.indexOf(visible[visible.length - 1].id) + 1 : all.length;
+    const ids = [...all];
+    ids.splice(pos, 0, drag.id);
     setDrag(null);
 
     // Optimistic update, then persist.
@@ -60,10 +88,15 @@ export default function Board({ workspace }) {
     }
   }
 
-  async function create(status, title) {
+  async function create(status, title, group) {
     setAdding(null);
     if (!title.trim()) return;
-    const p = await api.createProject({ title, status });
+    try {
+      localStorage.setItem(GROUP_KEY, group);
+    } catch {
+      // storage unavailable; the choice just isn't remembered
+    }
+    const p = await api.createProject({ title, status, group: group || null });
     navigate(`#/p/${encodeURIComponent(p.id)}`);
   }
 
@@ -72,8 +105,9 @@ export default function Board({ workspace }) {
   return (
     <div className="board-wrap">
       <div className="board-toolbar">
-        <input className="search" placeholder="Filter projects…" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <span className="muted">{projects.length} projects</span>
+        <input className="search" placeholder="Search titles…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <FilterBar fields={fields} projects={projects} filters={filters} onChange={onFilters} />
+        <span className="muted">{shownCount === projects.length ? `${projects.length} projects` : `${shownCount} of ${projects.length} projects`}</span>
       </div>
       <div className="board">
         {columns.map((col) => (
@@ -114,7 +148,7 @@ export default function Board({ workspace }) {
               {drag?.over?.status === col.id && drag.over.index === col.items.length && <div className="drop-marker" />}
             </div>
             {adding === col.id ? (
-              <NewCardInput onDone={(title) => create(col.id, title)} />
+              <NewCardInput groups={workspace.groups} onDone={(title, group) => create(col.id, title, group)} />
             ) : (
               <button className="add-card" onClick={() => setAdding(col.id)}>
                 + New project
@@ -129,6 +163,7 @@ export default function Board({ workspace }) {
 
 function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd, onDragOverCard }) {
   const { subtasks } = project;
+  const group = workspace.groups.find((g) => g.id === project.group);
   return (
     <>
       {dropBefore && <div className="drop-marker" />}
@@ -161,6 +196,12 @@ function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd
           </div>
         )}
         <div className="card-props">
+          {group && (
+            <div className="card-prop">
+              <span className="card-prop-label">Group</span>
+              <span className="card-prop-value">{group.name}</span>
+            </div>
+          )}
           {workspace.properties
             .filter((def) => !isEmpty(project.properties[def.key]) && project.properties[def.key] !== false)
             .map((def) => (
@@ -195,25 +236,37 @@ function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd
   );
 }
 
-function NewCardInput({ onDone }) {
-  const ref = useRef(null);
+// Title plus, when groups exist, which group the project belongs to. Enter creates it;
+// Escape, or leaving the form with an empty title, cancels.
+function NewCardInput({ groups, onDone }) {
+  const [group, setGroup] = useState(() => lastGroup(groups));
   const done = useRef(false);
+  const title = useRef(null);
   const finish = (v) => {
     if (done.current) return;
     done.current = true;
-    onDone(v);
+    onDone(v, group);
   };
   return (
-    <input
-      ref={ref}
-      autoFocus
-      className="new-card"
-      placeholder="Project name, then Enter"
+    <div
+      className="new-card-form"
+      onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && finish(title.current.value)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') finish(e.currentTarget.value);
+        if (e.key === 'Enter') finish(title.current.value);
         if (e.key === 'Escape') finish('');
       }}
-      onBlur={(e) => finish(e.currentTarget.value)}
-    />
+    >
+      <input ref={title} autoFocus className="new-card" placeholder="Project name, then Enter" />
+      {groups.length > 0 && (
+        <select value={group} onChange={(e) => setGroup(e.target.value)} aria-label="Group">
+          <option value="">No group</option>
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
   );
 }
