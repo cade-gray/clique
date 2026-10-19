@@ -45,7 +45,7 @@ npm test           # storage tests
 
 ## Where the data lives
 
-`DATA_DIR` (default `./data`) holds everything. The repo ships with a starter workspace in `data/` with a welcome project plus example projects for a credit union integrations team (each project is a built integration, such as an ITSM ↔ core banking incident sync), so a fresh clone opens to a working board. (If `workspace.yaml` is ever missing, the app recreates the defaults and the welcome project.) The `data/.trash/` folder is git-ignored.
+`DATA_DIR` (default `./data`) holds everything. The repo ships with a starter workspace in `data/` with a welcome project plus example projects for a credit union integrations team (each project is a built integration, such as an ITSM ↔ core banking incident sync), so a fresh clone opens to a working board. (If `workspace.yaml` is ever missing, the app recreates the defaults and the welcome project.) The `data/.trash/` folder and `data/events.ndjson` are git-ignored.
 
 Clique is built for one board shared by one team. To keep your team's real data in git, commit `data/` and use normal pull/push to share it; to keep it out of the repo, point `DATA_DIR` somewhere else.
 
@@ -57,8 +57,22 @@ data/
       index.md                       the project: frontmatter + overview page
       meeting-notes.md               an extra page inside the project
       attachments/                   images pasted into the project's pages, linked as attachments/<file>
+  events.ndjson                      append-only history: creates, column moves, deletes (feeds Stats)
   .trash/                            deleted projects and pages are moved here, never erased
 ```
+
+### events.ndjson
+
+A project file holds its *current* state, so moving a card overwrites the column that was there before and nothing records that the move happened. `events.ndjson` is that record: one JSON object per line, appended and never rewritten, which is what the **Stats** page reads for go-lives per month and time-to-go-live.
+
+```
+{"at":"2026-10-18T09:00:00.000Z","type":"created","project":"ledger-feed","title":"Ledger feed","to":"backlog"}
+{"at":"2026-10-18T11:30:00.000Z","type":"status","project":"ledger-feed","title":"Ledger feed","from":"backlog","to":"live"}
+```
+
+The first time a version with the log runs against an existing data folder, it writes a `created` line for every project from that project's own `created` date and then a `log-started` line. Those creation dates are real, so the "created" figures go back as far as the board does; the column moves made before that point were never written down, so nothing is invented for them and Stats reports those months as *not recorded* rather than zero.
+
+**It cannot be rebuilt from the markdown**, so include it in your backups along with the rest of `DATA_DIR`. Losing it loses the delivery history and nothing else: the board, the projects and their pages are unaffected. A line that cannot be parsed is skipped rather than breaking the page, so it is safe to prune old lines by hand if it ever grows unwieldy (at a few hundred projects it stays in the tens of kilobytes).
 
 ### workspace.yaml
 
@@ -203,6 +217,7 @@ Property, status and to-do changes save immediately. Each property and the statu
 - **To-dos**: check off, edit inline, drag to reorder, assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.)
 - **Global properties** (Configuration screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
 - **Import from Microsoft Planner**: turn a Planner plan into projects, one per task. See below.
+- **Stats** (top bar): two sections on one page. *Portfolio* is the management summary — active and live counts, go-lives in the last 90 days, typical time from created to go-live, where the work sits by column, each group's portfolio by column, and created vs went-live by month. *Day to day* is the operational side — projects that are blocked, past their go-live date or untouched for 30 days; what each person is carrying; and recent activity. Every chart has a **Show the numbers** table under it, and the page prints as a light-themed report. History comes from `events.ndjson`; the snapshot comes from the project files.
 - **Help page** (top bar): explains what Clique is for and what each board column means, using the board's own column and property names, so new team members can find their way around.
 
 ## Importing from Microsoft Planner
@@ -543,8 +558,11 @@ Serverless or container services that have no persistent disk (App Runner, Lambd
 ```
 server/index.js        Express routes (/api/...) + static hosting of dist/
 server/store.js        markdown-on-disk storage, frontmatter, conflict checks
+server/events.js       append-only event log (events.ndjson): writes, reads, skips unreadable lines
+server/stats.js        pure computeStats(projects, workspace, events) behind GET /api/stats
 server/planner.js      Microsoft Planner import: finds the task table in the export and maps tasks to projects
 server/xlsx.js         minimal .xlsx reader used by the Planner import (no dependency)
 src/App.jsx            hash router and top bar
-src/components/        Board, ListView, ProjectView, Subtasks (to-dos), Updates, Settings, ImportView, HelpView, DocBody (autosave), MarkdownEditor (Crepe)
+src/components/        Board, ListView, StatsView, ProjectView, Subtasks (to-dos), Updates, Settings, ImportView, HelpView, DocBody (autosave), MarkdownEditor (Crepe)
+src/components/charts.jsx  bars, stacked bars, columns, tiles and meters built from divs (no charting library)
 ```

@@ -265,3 +265,68 @@ test('groups are saved with the workspace and projects can belong to one', async
   assert.equal((await store.getProject(p.id)).group, null);
   assert.equal((await store.listProjects()).find((x) => x.id === p.id).group, null);
 });
+
+test('the event log records creates, column moves and deletes', async () => {
+  const store = await freshStore();
+  const types = async () => (await store.events.read()).map((e) => [e.type, e.project ?? '', e.from ?? '', e.to ?? '']);
+
+  // A fresh data folder has nothing to backfill, so the log opens with just its marker
+  // and then the seeded example project.
+  assert.deepEqual(await types(), [
+    ['log-started', '', '', ''],
+    ['created', 'welcome-to-clique', '', 'in-progress'],
+  ]);
+
+  const p = await store.createProject({ title: 'Ledger feed', status: 'backlog' });
+  await store.updateProject(p.id, { status: 'live' });
+  await store.updateProject(p.id, { title: 'Renamed' }); // not a move: no event
+  await store.reorderColumn('graveyard', [p.id]); // dragging a card between columns
+  await store.reorderColumn('graveyard', [p.id]); // already there: no event
+  await store.deleteProject(p.id);
+
+  assert.deepEqual((await types()).slice(2), [
+    ['created', 'ledger-feed', '', 'backlog'],
+    ['status', 'ledger-feed', 'backlog', 'live'],
+    ['status', 'ledger-feed', 'live', 'graveyard'],
+    ['deleted', 'ledger-feed', 'graveyard', ''],
+  ]);
+  // The title at the time of the event is kept, so the log still reads after a rename.
+  assert.equal((await store.events.read()).at(-1).title, 'Renamed');
+});
+
+test('an existing data folder is backfilled from the project files, inventing nothing', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'clique-'));
+  // A folder written by a version from before the log existed.
+  await fs.mkdir(path.join(dir, 'projects', 'older'), { recursive: true });
+  await fs.writeFile(
+    path.join(dir, 'projects', 'older', 'index.md'),
+    stringifyMarkdown({ title: 'Older', status: 'live', created: '2026-02-01T00:00:00.000Z' }, ''),
+  );
+  await fs.writeFile(path.join(dir, 'workspace.yaml'), 'columns:\n  - id: live\n    name: Live\n');
+
+  const store = new Store(dir);
+  await store.init();
+  const events = await store.events.read();
+  assert.deepEqual(
+    events.map((e) => [e.type, e.project ?? '', e.backfilled === true]),
+    [
+      ['created', 'older', true],
+      ['log-started', '', false],
+    ],
+  );
+  // Its real creation date is kept; the status moves it made are gone, so none are written.
+  assert.equal(events[0].at, '2026-02-01T00:00:00.000Z');
+  assert.equal(events[0].to, undefined);
+
+  // Starting again does not backfill a second time.
+  await new Store(dir).init();
+  assert.equal((await store.events.read()).length, 2);
+});
+
+test('an unreadable line in the log is skipped rather than breaking the page', async () => {
+  const store = await freshStore();
+  await fs.appendFile(store.eventsFile, 'not json\n\n{"type":"nonsense","at":"2026-01-01T00:00:00.000Z"}\n{"type":"status","at":"bad date"}\n');
+  const events = await store.events.read();
+  assert.equal(events.some((e) => e.type === 'log-started'), true);
+  assert.equal(events.some((e) => e.type === 'nonsense'), false);
+});

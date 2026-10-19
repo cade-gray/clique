@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Store, HttpError } from './store.js';
+import { computeStats } from './stats.js';
 import { parsePlannerWorkbook, plannerTargets, importPlannerTasks } from './planner.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -31,6 +32,21 @@ api.post('/projects/:id/updates', h((req) => store.addUpdate(req.params.id, req.
 api.delete('/projects/:id/updates/:uid', h((req) => store.deleteUpdate(req.params.id, req.params.uid)));
 api.delete('/projects/:id', h((req) => store.deleteProject(req.params.id)));
 api.post('/board/reorder', h((req) => store.reorderColumn(req.body.status, req.body.ids ?? [])));
+
+// Everything the stats page shows, worked out per request. The inputs are every project's
+// frontmatter plus the event log; at the size this app is built for that is a few hundred
+// small files and a log measured in kilobytes, so there is nothing cached to go stale.
+api.get(
+  '/stats',
+  h(async () => {
+    const [projects, workspace, events] = await Promise.all([
+      store.listProjects({ withSubtasks: true }),
+      store.getWorkspace(),
+      store.events.read(),
+    ]);
+    return computeStats({ projects, workspace, events });
+  }),
+);
 
 // Images arrive as the raw request body with their own Content-Type; ?name= is the original file name.
 api.post(

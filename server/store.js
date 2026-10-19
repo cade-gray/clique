@@ -4,6 +4,7 @@
 //   projects/<id>/index.md      the project: frontmatter (status, properties, to-dos, updates) + overview body
 //   projects/<id>/<page>.md     extra pages inside the project
 //   projects/<id>/attachments/  images pasted into the project's pages, linked as attachments/<file>
+//   events.ndjson               append-only history of creates, status moves and deletes
 //   .trash/                    deleted projects and pages land here instead of being removed
 //
 // Everything is plain text so the folder can be opened in Obsidian, diffed, or backed up as-is.
@@ -12,11 +13,14 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import YAML from 'yaml';
+import { EventLog } from './events.js';
 
 export const RESERVED_KEYS = ['title', 'status', 'order', 'group', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
 
 // The column for projects that are in production. Only projects here can be flagged as in maintenance.
 export const LIVE_STATUS = 'live';
+// The column for retired projects. Neither of these counts as work in flight.
+export const GRAVEYARD_STATUS = 'graveyard';
 
 const DEFAULT_WORKSPACE = {
   columns: [
@@ -171,15 +175,33 @@ export class Store {
     this.projectsDir = path.join(this.dir, 'projects');
     this.trashDir = path.join(this.dir, '.trash');
     this.workspaceFile = path.join(this.dir, 'workspace.yaml');
+    this.eventsFile = path.join(this.dir, 'events.ndjson');
+    this.events = new EventLog(this.eventsFile);
   }
 
   async init() {
     await fs.mkdir(this.projectsDir, { recursive: true });
-    if (!(await exists(this.workspaceFile))) {
-      await writeFileAtomic(this.workspaceFile, YAML.stringify(DEFAULT_WORKSPACE));
-      if ((await fs.readdir(this.projectsDir)).length === 0) await this.seed();
-    }
+    const fresh = !(await exists(this.workspaceFile));
+    if (fresh) await writeFileAtomic(this.workspaceFile, YAML.stringify(DEFAULT_WORKSPACE));
     await this.migrateDoneToLive();
+    // Before seeding, so the example project is recorded like any other new project.
+    await this.startEventLog();
+    if (fresh && (await fs.readdir(this.projectsDir)).length === 0) await this.seed();
+  }
+
+  // The history only exists from the first time a version with the event log runs. Projects
+  // that already exist get a `created` event from their own frontmatter timestamp, which is
+  // real recorded data; the status moves they made before now were never written down and
+  // cannot be recovered, so nothing is invented for them. The `log-started` marker is what
+  // lets the stats page say which period its delivery figures actually cover.
+  async startEventLog() {
+    const existing = await this.events.read();
+    if (existing.some((e) => e.type === 'log-started')) return;
+    const backfill = (await this.listProjects())
+      .filter((p) => p.created)
+      .map((p) => ({ at: p.created, type: 'created', project: p.id, title: p.title, backfilled: true }))
+      .sort((a, b) => a.at.localeCompare(b.at));
+    await this.events.appendAll([...backfill, { at: now(), type: 'log-started' }]);
   }
 
   // Workspaces from before 1.1 have a "done" column. It becomes "Live", with a "Graveyard"
@@ -401,6 +423,7 @@ export class Store {
       this.projectFile(id),
       stringifyMarkdown({ title, status, ...(group ? { group } : {}), order, created: ts, updated: ts, subtasks: [] }, ''),
     );
+    await this.events.append({ at: ts, type: 'created', project: id, title, to: status });
     return this.getProject(id);
   }
 
@@ -417,6 +440,7 @@ export class Store {
         });
       }
       const data = { ...doc.data };
+      const statusBefore = doc.data.status ?? null;
       const ws = await this.getWorkspace();
       if (patch.title !== undefined) data.title = String(patch.title).trim() || 'Untitled project';
       if (patch.status !== undefined) {
@@ -456,6 +480,8 @@ export class Store {
       }
       data.updated = now();
       await writeFileAtomic(file, stringifyMarkdown(data, patch.body ?? doc.body));
+      if (data.status !== statusBefore)
+        await this.events.append({ at: data.updated, type: 'status', project: id, title: data.title ?? id, from: statusBefore, to: data.status });
     });
     return this.getProject(id);
   }
@@ -500,7 +526,11 @@ export class Store {
       await withLock(file, async () => {
         const doc = await this.readDoc(file);
         if (doc.data.status === status && Number(doc.data.order) === i) return;
+        const statusBefore = doc.data.status ?? null;
         await writeFileAtomic(file, stringifyMarkdown({ ...doc.data, status, order: i }, doc.body));
+        // Dragging a card between columns comes through here rather than updateProject.
+        if (status !== statusBefore)
+          await this.events.append({ at: now(), type: 'status', project: id, title: doc.data.title ?? id, from: statusBefore, to: status });
       });
     }
   }
@@ -514,7 +544,10 @@ export class Store {
   async deleteProject(id) {
     const dir = this.projectDir(id);
     if (!(await exists(dir))) throw new HttpError(404, 'Not found');
+    // Read the title and column before the folder moves, so the log still says what went.
+    const doc = await this.readDoc(this.projectFile(id)).catch(() => ({ data: {} }));
     await this.moveToTrash(dir, id);
+    await this.events.append({ at: now(), type: 'deleted', project: id, title: doc.data.title ?? id, from: doc.data.status ?? null });
   }
 
   // ----- attachments -----
