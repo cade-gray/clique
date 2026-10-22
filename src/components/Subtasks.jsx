@@ -86,6 +86,8 @@ export default function Subtasks({ items, projectTitle, onChange }) {
                   placeholder="+ Owner"
                   onChange={(owners) => update(i, { owners: owners.length ? owners : undefined })}
                 />
+              </div>
+              <div className="subtask-actions">
                 <ScheduleBlock text={s.text} owners={s.owners} projectTitle={projectTitle} />
               </div>
             </div>
