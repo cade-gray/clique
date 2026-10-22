@@ -158,7 +158,7 @@ export default function ProjectView({ id, pageId, workspace }) {
                 </a>
               </div>
 
-              <Subtasks items={project.subtasks} onChange={(subtasks) => patch({ subtasks })} />
+              <Subtasks items={project.subtasks} projectTitle={project.title} onChange={(subtasks) => patch({ subtasks })} />
 
               <Updates projectId={id} updates={project.updates} onChange={(meta) => setProject((p) => ({ ...p, ...meta }))} />
             </PeopleContext.Provider>

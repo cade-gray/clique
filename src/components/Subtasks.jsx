@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import Popover from './Popover.jsx';
+import { downloadIcs, formatSlot, icsFilename, icsText, outlookUrl, subtaskEvent } from './calendar.js';
 import { PeopleInput, Tag, fitToContent, formatDateTime, timeAgo, toPeople } from './props.jsx';
 
-export default function Subtasks({ items, onChange }) {
+export default function Subtasks({ items, projectTitle, onChange }) {
   const [dragIndex, setDragIndex] = useState(null);
 
   // Keep each item's index in the full list so edits and reordering target the right entry.
@@ -84,6 +86,7 @@ export default function Subtasks({ items, onChange }) {
                   placeholder="+ Owner"
                   onChange={(owners) => update(i, { owners: owners.length ? owners : undefined })}
                 />
+                <ScheduleBlock text={s.text} owners={s.owners} projectTitle={projectTitle} />
               </div>
             </div>
             <button className="icon" onClick={() => remove(i)} title="Delete subtask">
@@ -137,5 +140,56 @@ export default function Subtasks({ items, onChange }) {
         </details>
       )}
     </section>
+  );
+}
+
+// Books time to work on a to-do. Clique hands the event to a calendar and keeps nothing: there is
+// no way for it to know whether the block was kept, moved or deleted afterwards.
+function ScheduleBlock({ text, owners, projectTitle }) {
+  const [open, setOpen] = useState(false);
+  const anchor = useRef(null);
+  return (
+    <span className="schedule">
+      <button
+        ref={anchor}
+        className="schedule-btn"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        title="Block time to work on this"
+      >
+        📅 Schedule
+      </button>
+      {open && (
+        <ScheduleMenu
+          anchor={anchor}
+          event={subtaskEvent({ text, owners: toPeople(owners), projectTitle, url: window.location.href })}
+          filename={icsFilename(text)}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </span>
+  );
+}
+
+function ScheduleMenu({ anchor, event, filename, onClose }) {
+  return (
+    <Popover anchor={anchor} onClose={onClose} className="schedule-menu">
+      <div className="popover-label">Block time to work on this</div>
+      <span className="popover-hint popover-note">
+        {formatSlot(event.start, event.end)} — move it to a free slot once your calendar is open.
+      </span>
+      <a className="popover-item" href={outlookUrl(event)} target="_blank" rel="noreferrer" onClick={onClose}>
+        Outlook on the web <span className="muted">↗</span>
+      </a>
+      <button
+        className="popover-item"
+        onClick={() => {
+          downloadIcs(filename, icsText(event));
+          onClose();
+        }}
+      >
+        Download .ics file
+      </button>
+    </Popover>
   );
 }

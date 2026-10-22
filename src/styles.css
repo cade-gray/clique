@@ -378,6 +378,10 @@ ul.people-menu .people-menu-label, ul.people-menu .people-menu-label:hover { bac
 .subtask-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .subtask-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-left: 4px; }
 .subtask-meta:empty { display: none; }
+.schedule { position: relative; display: inline-block; }
+.schedule-btn { border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; background: transparent; color: var(--muted); font-size: 13px; }
+.schedule-btn:hover { background: var(--hover); color: var(--text); }
+.schedule-menu .popover-item { justify-content: space-between; text-decoration: none; }
 .subtask-history { margin-top: 8px; }
 .subtask-history summary { cursor: pointer; color: var(--muted); font-size: 13px; padding: 4px 0; user-select: none; }
 .subtask-history summary:hover { color: var(--text); }
