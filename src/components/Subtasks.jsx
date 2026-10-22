@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PeopleInput, Tag, formatDateTime, timeAgo, toPeople } from './props.jsx';
+import { PeopleInput, Tag, fitToContent, formatDateTime, timeAgo, toPeople } from './props.jsx';
 
 export default function Subtasks({ items, onChange }) {
   const [dragIndex, setDragIndex] = useState(null);
@@ -57,22 +57,35 @@ export default function Subtasks({ items, onChange }) {
               ⋮⋮
             </span>
             <input type="checkbox" checked={false} onChange={() => setDone(i, true)} />
-            <input
-              key={s.text}
-              className="subtask-text"
-              defaultValue={s.text}
-              onBlur={(e) => {
-                const v = e.target.value.trim();
-                if (!v) remove(i);
-                else if (v !== s.text) update(i, { text: v });
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-            />
-            <PeopleInput
-              value={s.owners}
-              placeholder="+ Owner"
-              onChange={(owners) => update(i, { owners: owners.length ? owners : undefined })}
-            />
+            <div className="subtask-main">
+              {/* A to-do is one line of text: Enter saves it rather than adding a line break. */}
+              <textarea
+                key={s.text}
+                className="subtask-text"
+                rows={1}
+                defaultValue={s.text}
+                ref={fitToContent}
+                onInput={(e) => fitToContent(e.currentTarget)}
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  if (!v) remove(i);
+                  else if (v !== s.text) update(i, { text: v });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
+                }}
+              />
+              <div className="subtask-meta">
+                <PeopleInput
+                  value={s.owners}
+                  placeholder="+ Owner"
+                  onChange={(owners) => update(i, { owners: owners.length ? owners : undefined })}
+                />
+              </div>
+            </div>
             <button className="icon" onClick={() => remove(i)} title="Delete subtask">
               ×
             </button>
@@ -102,15 +115,19 @@ export default function Subtasks({ items, onChange }) {
                   onChange={() => setDone(i, false)}
                   title="Uncheck to move back to to-dos"
                 />
-                <span className="subtask-text">{s.text}</span>
-                {toPeople(s.owners).map((n) => (
-                  <Tag key={n}>{n}</Tag>
-                ))}
-                {s.doneAt && (
-                  <span className="muted small" title={formatDateTime(s.doneAt)}>
-                    {timeAgo(s.doneAt)}
-                  </span>
-                )}
+                <div className="subtask-main">
+                  <span className="subtask-text">{s.text}</span>
+                  <div className="subtask-meta">
+                    {toPeople(s.owners).map((n) => (
+                      <Tag key={n}>{n}</Tag>
+                    ))}
+                    {s.doneAt && (
+                      <span className="muted small" title={formatDateTime(s.doneAt)}>
+                        {timeAgo(s.doneAt)}
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <button className="icon" onClick={() => remove(i)} title="Delete subtask">
                   ×
                 </button>

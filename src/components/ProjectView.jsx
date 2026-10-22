@@ -144,7 +144,7 @@ export default function ProjectView({ id, pageId, workspace }) {
                   </div>
                 )}
                 {workspace.properties.map((def) => (
-                  <div className="prop-row" key={def.key}>
+                  <div className={`prop-row prop-row-${def.type}`} key={def.key}>
                     <label>{def.name}</label>
                     <PropertyInput
                       def={def}
