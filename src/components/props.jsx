@@ -245,6 +245,8 @@ export function PropertyInput({ def, value, onChange }) {
       return (
         <input type="date" value={isEmpty(value) ? '' : String(value).slice(0, 10)} onChange={(e) => onChange(e.target.value || null)} />
       );
+    case 'text':
+      return <BufferedTextarea value={value} placeholder="Empty" onCommit={(v) => onChange(v || null)} />;
     case 'number':
       return <BufferedInput type="number" value={value} onCommit={(v) => onChange(v === '' ? null : Number(v))} />;
     case 'url':
@@ -261,6 +263,29 @@ export function PropertyInput({ def, value, onChange }) {
     default:
       return <BufferedInput value={value} placeholder="Empty" onCommit={(v) => onChange(v || null)} />;
   }
+}
+
+// Grow a textarea to fit what it holds, so nothing is hidden behind a scrollbar.
+export function fitToContent(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+}
+
+// Long text (the Summary, say) wraps in a box tall enough to read at a glance.
+function BufferedTextarea({ value, onCommit, ...rest }) {
+  const initial = isEmpty(value) ? '' : String(value);
+  return (
+    <textarea
+      key={initial}
+      className="prop-textarea"
+      defaultValue={initial}
+      ref={fitToContent}
+      onInput={(e) => fitToContent(e.currentTarget)}
+      {...rest}
+      onBlur={(e) => e.target.value !== initial && onCommit(e.target.value.trim())}
+    />
+  );
 }
 
 // Text-like inputs save on blur / Enter instead of every keystroke.

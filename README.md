@@ -21,7 +21,7 @@ Each project is more than a ticket:
 - **Properties** shared by every project (owners, systems, go-live date, priority, or whatever your team needs) show on the card, so the board doubles as an inventory of what's been built.
 - **Pages**: an overview plus as many sub-pages as you like (design, field mapping, runbook, meeting notes), edited Notion-style with markdown that renders as you type, tables, and code blocks with a copy button.
 - **Status updates** keep a dated record of decisions and progress; the latest one shows on the card.
-- **To-dos** with owners and history, plus **Blocked** and **Maintenance** flags that stand out on the board.
+- **To-dos** with owners and history, each able to book a working block in Outlook or any calendar that reads `.ics`, plus **Blocked** and **Maintenance** flags that stand out on the board.
 - **List view** for a sortable, printable, CSV-exportable view of everything, for management reports or audits.
 
 Everything is stored as plain markdown files on disk (Obsidian-style), so the documentation outlives the tool: it can be read, searched, backed up or put in git without Clique. There is no database and no login yet; everyone who can reach the site edits the same board.
@@ -40,7 +40,7 @@ Production:
 ```bash
 npm run build      # builds the React app into dist/
 npm start          # serves dist/ and the API on PORT (default 3001)
-npm test           # storage tests
+npm test           # storage and calendar-event tests
 ```
 
 ## Where the data lives
@@ -214,7 +214,7 @@ Property, status and to-do changes save immediately. Each property and the statu
 - **Blocked**: tick Blocked on a project to outline its card in red; an optional reason shows on the card (`blocked` / `blockedReason` in the frontmatter).
 - **Maintenance**: projects in the **Live** column have a Maintenance checkbox that outlines the card in yellow (`maintenance` in the frontmatter). A project that is both blocked and in maintenance gets a yellow outline with a red one around it. Moving a project out of Live hides the flag; it comes back if the project returns to Live.
 - **Groups**: define teams and their people under Configuration. Pick a project's group when creating it on the board (the last one you used is preselected) or on the project page. Owner fields on the project and its to-dos then open a dropdown of that group's members; other people show up as you type, and any other name can still be typed in. The group shows on the card and as a column in the list view and CSV.
-- **To-dos**: check off, edit inline, drag to reorder, assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.)
+- **To-dos**: check off, edit inline, drag to reorder, assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.) **📅 Schedule** books time to work on one: it offers Outlook on the web, which opens a pre-filled draft, or a `.ics` download for desktop Outlook, Apple Calendar and the rest. The block starts as an hour at 9am tomorrow and is meant to be dragged to a free slot in the calendar itself, where the day's conflicts are visible. Nothing is saved in Clique, so it never claims to know what your calendar actually holds.
 - **Global properties** (Configuration screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
 - **Import from Microsoft Planner**: turn a Planner plan into projects, one per task. See below.
 - **Stats** (top bar): two sections on one page. *Portfolio* is the management summary — active and live counts, go-lives in the last 90 days, typical time from created to go-live, where the work sits by column, each group's portfolio by column, and created vs went-live by month. *Day to day* is the operational side — projects that are blocked, past their go-live date or untouched for 30 days; what each person is carrying; and recent activity. Every chart has a **Show the numbers** table under it, and the page prints as a light-themed report. History comes from `events.ndjson`; the snapshot comes from the project files.
@@ -563,6 +563,6 @@ server/stats.js        pure computeStats(projects, workspace, events) behind GET
 server/planner.js      Microsoft Planner import: finds the task table in the export and maps tasks to projects
 server/xlsx.js         minimal .xlsx reader used by the Planner import (no dependency)
 src/App.jsx            hash router and top bar
-src/components/        Board, ListView, StatsView, ProjectView, Subtasks (to-dos), Updates, Settings, ImportView, HelpView, DocBody (autosave), MarkdownEditor (Crepe)
+src/components/        Board, ListView, StatsView, ProjectView, Subtasks (to-dos), Updates, Settings, ImportView, HelpView, DocBody (autosave), MarkdownEditor (Crepe), calendar.js (Outlook link / .ics)
 src/components/charts.jsx  bars, stacked bars, columns, tiles and meters built from divs (no charting library)
 ```

@@ -144,7 +144,7 @@ export default function ProjectView({ id, pageId, workspace }) {
                   </div>
                 )}
                 {workspace.properties.map((def) => (
-                  <div className="prop-row" key={def.key}>
+                  <div className={`prop-row prop-row-${def.type}`} key={def.key}>
                     <label>{def.name}</label>
                     <PropertyInput
                       def={def}
@@ -158,7 +158,7 @@ export default function ProjectView({ id, pageId, workspace }) {
                 </a>
               </div>
 
-              <Subtasks items={project.subtasks} onChange={(subtasks) => patch({ subtasks })} />
+              <Subtasks items={project.subtasks} projectTitle={project.title} onChange={(subtasks) => patch({ subtasks })} />
 
               <Updates projectId={id} updates={project.updates} onChange={(meta) => setProject((p) => ({ ...p, ...meta }))} />
             </PeopleContext.Provider>
