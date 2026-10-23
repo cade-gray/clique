@@ -105,6 +105,18 @@ api.use((err, req, res, _next) => {
 
 // BASE_PATH is the IIS virtual directory (e.g. /clique) when not hosted at the site root.
 const base = (process.env.BASE_PATH || '').replace(/\/+$/, '');
+// Liveness check for the container health check and for the deploy's verify step: it proves
+// the process is up and its data folder is readable, so a wrong DATA_DIR fails the deploy
+// instead of shipping a board that cannot save. No auth, and outside /api on purpose.
+app.get(`${base}/health`, async (req, res) => {
+  try {
+    await store.getWorkspace();
+    res.json({ status: 'ok' });
+  } catch (err) {
+    res.status(503).json({ status: 'data folder unavailable', error: err.message });
+  }
+});
+
 app.use(`${base}/api`, api);
 app.use(base || '/', express.static(path.join(root, 'dist')));
 
@@ -113,13 +125,23 @@ const port = process.env.HTTP_PLATFORM_PORT || process.env.PORT || 3001;
 // Startup problems go to the log in plain words (under IIS that is logs\node.log).
 store.init().then(
   () => {
-    app.listen(port, (err) => {
+    const server = app.listen(port, (err) => {
       if (err) {
         console.error(`Clique could not listen on port ${port}: ${err.message}`);
         process.exit(1);
       }
       console.log(`Clique listening on ${port}, data in ${store.dir}`);
     });
+    // Docker sends SIGTERM on every redeploy and waits 10 s before killing the process, so
+    // finish the requests already in flight rather than dropping someone's save. Writes are
+    // atomic either way, so the worst a hard kill costs is one edit. (Nothing sends SIGTERM
+    // under IIS, where HttpPlatformHandler stops the process its own way.)
+    const shutdown = () => {
+      server.close(() => process.exit(0));
+      setTimeout(() => process.exit(0), 9000).unref();
+    };
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
   },
   (err) => {
     console.error(`Clique could not open its data folder ${store.dir}: ${err.message}`);

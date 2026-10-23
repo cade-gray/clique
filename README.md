@@ -513,6 +513,167 @@ On DigitalOcean you can also use a Cloud Firewall with the same rules.
 
 **Backups:** turn on Droplet backups or snapshots, and also copy `/var/lib/clique` somewhere else (a cron `rsync`, or commit it to a private git repo).
 
+### DigitalOcean Droplet with GitHub Actions and Docker (CI/CD)
+
+The section above runs Clique straight on the machine with systemd. This one is the automated
+version used for `cade-gray/clique`: GitHub Actions builds a Docker image, pushes it to GHCR,
+and the droplet pulls it. A push to `main` ships; nothing is built on the server. It follows
+the house rules in [droplet-deployment-standards](https://github.com/cade-gray/droplet-deployment-standards),
+and it is additive — **IIS hosting is untouched**, `web.config` still runs Node directly and
+knows nothing about Docker.
+
+What the deploy does, in order: build `linux/amd64` and push `:latest` plus the commit SHA to
+GHCR, copy `compose.prod.yaml` to `/srv/clique`, `docker compose pull`, `up -d`, then curl
+`/health` every 3 s for up to 60 s and fail the run (printing the last 50 log lines) if it
+never answers. It never runs `down`, so the board stays up while the new container starts.
+
+Settings for this repo:
+
+| Thing | Value |
+| --- | --- |
+| Image | `ghcr.io/cade-gray/clique:latest` and `:<commit sha>` |
+| Host port → container port | `127.0.0.1:3007` → `3000` |
+| Folder on the droplet | `/srv/clique` (compose file, `.env`) |
+| Board data | `/srv/clique/data`, bind-mounted at `/data` |
+| Domain | `clique.cadegray.dev` (Caddy reverse-proxies to `localhost:3007`) |
+| Health check | `GET /health` → `200 {"status":"ok"}` once the data folder is readable |
+
+Files this adds: `Dockerfile` (Node 24 Alpine, three stages, runs as the non-root `node`
+user), `.dockerignore`, `compose.yaml` (run the image locally), `compose.prod.yaml` (what the
+droplet runs), `.env.example`, `.github/workflows/ci.yml`, `.github/workflows/deploy.yml` and
+`.github/dependabot.yml`.
+
+Two things are worth knowing before copying this for another app:
+
+- **The data folder is a volume, and the image deliberately has no `data/`.** The example
+  board in the repo is not copied into the image, so a deploy can never overwrite the real
+  one. The first container on an empty folder creates default columns and a welcome project;
+  seed it yourself instead if you want the example board or an existing one (below).
+- **CI runs `npm run build` and `npm test`, not `npm run lint`.** Clique is plain JSX with no
+  linter or TypeScript, so there is no lint or typecheck step to run; the Docker build in CI
+  is what catches a broken image.
+
+**1. Set up GitHub**
+
+Three repo secrets, plus a fourth if SSH is not on port 22. Run these from a clone of the repo:
+
+```bash
+gh secret set VPS_HOST    --body "<droplet ip or hostname>"
+gh secret set VPS_USER    --body "deploy"
+gh secret set VPS_SSH_KEY < ~/.ssh/droplet_deploy      # the private key, not the .pub
+gh secret set VPS_PORT    --body "2222"                # only if SSH is not on 22
+```
+
+- The deploy pushes to GHCR with the built-in `GITHUB_TOKEN` (`packages: write`), so no PAT
+  is needed and no write-scoped token is ever stored on the droplet.
+- `deploy.yml` uses `environment: production`. Create that environment (Settings →
+  Environments) to get a deployment history page; the workflow runs without it too.
+- Turn on branch protection for `main` requiring the **CI** check, so a PR cannot merge
+  without a green build.
+- After the first deploy, set the `clique` package to **public** (package → Package settings →
+  Change visibility) so the droplet pulls without logging in to GHCR.
+
+**2. Set up the droplet** (once, as a sudo user)
+
+```bash
+# Docker Engine and the compose plugin, from the official Docker apt repository
+# (docs.docker.com/engine/install/ubuntu). Then make sure it comes back after a reboot:
+sudo systemctl enable docker
+
+# A deploy user whose only privilege is Docker. Treat its key as root-equivalent.
+sudo adduser --disabled-password --gecos "" deploy
+sudo usermod -aG docker deploy
+sudo install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
+# Paste the public half of the key you put in VPS_SSH_KEY:
+sudo -u deploy tee -a /home/deploy/.ssh/authorized_keys < ~/droplet_deploy.pub
+sudo chmod 600 /home/deploy/.ssh/authorized_keys
+
+# Where the app lives. The data folder is owned by uid 1000, the node user in the container.
+sudo install -d -o deploy -g deploy /srv/clique
+sudo install -d -o 1000 -g 1000 /srv/clique/data
+
+# Runtime config. Copy .env.example from the repo, then:
+sudo -u deploy chmod 600 /srv/clique/.env
+```
+
+`/srv/clique/.env` is the only thing that runs on the droplet and is not in git. Clique has no
+secrets of its own (no database, no login), so it holds configuration only:
+
+```bash
+NODE_ENV=production
+PORT=3000
+DATA_DIR=/data
+BASE_PATH=
+TAG=latest
+```
+
+To start from an existing board rather than a fresh one, copy it in before the first deploy —
+`workspace.yaml`, `projects/` and, if you want the delivery history, `events.ndjson`:
+
+```bash
+# from your machine
+scp -r data/workspace.yaml data/projects deploy@<droplet>:/srv/clique/data/
+ssh deploy@<droplet> 'sudo chown -R 1000:1000 /srv/clique/data'
+```
+
+**3. DNS and Caddy**
+
+Point an A record for `clique.cadegray.dev` at the droplet, then add the site block to
+`/etc/caddy/Caddyfile`. **Clique has no login, so put a password in front of it** — anyone who
+can reach the site can edit every project. Generate the hash with `caddy hash-password`:
+
+```caddy
+clique.cadegray.dev {
+    basic_auth {
+        team <paste-the-hash-here>
+    }
+    reverse_proxy localhost:3007
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}
+```
+
+```bash
+sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy
+```
+
+(On Caddy older than 2.8 the directive is spelled `basicauth`.) The container publishes its
+port on `127.0.0.1:3007`, not `0.0.0.0`: Docker writes its own iptables rules, so a wildcard
+port would be reachable over plain HTTP from the internet, around both Caddy and ufw. For real
+per-user sign-in, keep the droplet off the public internet and reach it over Tailscale or
+WireGuard instead.
+
+**4. First deploy**
+
+Run **Actions → Deploy → Run workflow** (`workflow_dispatch`) and watch the health check pass,
+then make the GHCR package public. After that, every push to `main` deploys on its own.
+
+**Rolling back.** Every deploy tags the image with its commit SHA, so on the droplet:
+
+```bash
+cd /srv/clique
+TAG=<good-sha> docker compose -f compose.prod.yaml up -d      # back on a known-good build
+```
+
+That is a stopgap: `git revert` the bad commit and merge it, so the next deploy moves `latest`
+back and a later plain `up -d` doesn't bring the bad build back.
+
+**Day-to-day commands** on the droplet, all from `/srv/clique`:
+
+```bash
+docker compose -f compose.prod.yaml ps          # is it up, is it healthy
+docker compose -f compose.prod.yaml logs -f     # follow the app log (10 MB x 3 rotation)
+docker compose -f compose.prod.yaml restart
+```
+
+**Backups.** The image is disposable; `/srv/clique/data` is not, and `events.ndjson` in it
+cannot be rebuilt from the markdown. Turn on Droplet backups and copy that folder off the box
+as well (an `rsync` or `restic` cron job, or a commit into a private git repo).
+
 ### Azure
 
 **App Service (Linux)** is the simplest managed option. The key point is where the data lives: on Linux App Service, the `/home` folder is persistent storage that survives restarts and deployments, so put `DATA_DIR` there. Everything else on the disk is replaced on each deploy.

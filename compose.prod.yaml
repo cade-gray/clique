@@ -1,0 +1,26 @@
+# What runs on the droplet, in /srv/clique. The deploy workflow copies this file there,
+# pulls the image and runs `up -d`. No secrets here: runtime values come from /srv/clique/.env.
+name: clique
+services:
+  app:
+    image: ghcr.io/cade-gray/clique:${TAG:-latest}
+    restart: unless-stopped
+    ports:
+      # Localhost only: Docker writes its own iptables rules, so a 0.0.0.0 port would be
+      # reachable over plain HTTP from the internet, around Caddy and around ufw.
+      - "127.0.0.1:3007:3000"
+    env_file: .env
+    volumes:
+      # The board lives on the droplet and survives every deploy. Clique keeps its data in
+      # files and expects a single process, so never scale this service past one replica.
+      - /srv/clique/data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

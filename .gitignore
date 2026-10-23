@@ -8,3 +8,8 @@ iisnode/
 # keep the empty logs folder so IIS (HttpPlatformHandler) has somewhere to write node.log
 logs/*
 !logs/.gitkeep
+
+# Droplet deploy: runtime config lives on the droplet, never in git
+.env
+.env.*
+!.env.example
