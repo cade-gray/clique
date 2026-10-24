@@ -1,0 +1,27 @@
+# Local run of the production image, built from source. Day-to-day development is still
+# `npm run dev` (API on :3001, Vite on :5173 with hot reload); this is for checking the
+# container itself before pushing. The droplet runs compose.prod.yaml.
+name: clique
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "127.0.0.1:3007:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATA_DIR: /data
+      BASE_PATH: ""
+    volumes:
+      # A named volume, not ./data, so a local container cannot edit the example board in
+      # the repo. Clique creates default columns and a welcome project on first start.
+      - clique-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  clique-data:

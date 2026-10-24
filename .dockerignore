@@ -1,0 +1,15 @@
+.git
+.github
+node_modules
+dist
+logs
+data
+.env
+.env.*
+compose.yaml
+compose.prod.yaml
+Dockerfile
+.dockerignore
+web.config
+*.md
+*.tmp
