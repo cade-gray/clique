@@ -573,7 +573,12 @@ gh secret set VPS_PORT    --body "2222"                # only if SSH is not on 2
 - After the first deploy, set the `clique` package to **public** (package → Package settings →
   Change visibility) so the droplet pulls without logging in to GHCR.
 
-**2. Set up the droplet** (once, as a sudo user)
+**2. Set up the droplet** (once)
+
+SSH in as **your own account, the one with sudo** — not as `deploy`. The `deploy` user has no
+sudo on purpose: its private key sits in a GitHub secret, and membership of the `docker` group
+is already root-equivalent, so sudo would only add a second, more obvious way in. `sudo` as
+`deploy` is meant to fail with "user deploy is not allowed to execute ...".
 
 ```bash
 # Docker Engine and the compose plugin, from the official Docker apt repository
@@ -587,33 +592,53 @@ sudo install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
 # Paste the public half of the key you put in VPS_SSH_KEY:
 sudo -u deploy tee -a /home/deploy/.ssh/authorized_keys < ~/droplet_deploy.pub
 sudo chmod 600 /home/deploy/.ssh/authorized_keys
+```
 
-# Where the app lives. The data folder is owned by uid 1000, the node user in the container.
+Then the app's two folders. `install -d` is `mkdir -p` plus ownership in one step, and the two
+owners are deliberately different:
+
+```bash
+# /srv/clique belongs to deploy, which is what the workflow's scp step writes
+# compose.prod.yaml as. Owned by anyone else, the deploy fails on the copy.
 sudo install -d -o deploy -g deploy /srv/clique
-sudo install -d -o 1000 -g 1000 /srv/clique/data
 
-# Runtime config. Copy .env.example from the repo, then:
-sudo -u deploy chmod 600 /srv/clique/.env
+# The data folder belongs to uid 1000: the node user inside the container, not a droplet
+# account. Only the container writes here, so this stays 1000 even if deploy isn't uid 1000.
+sudo install -d -o 1000 -g 1000 /srv/clique/data
 ```
 
 `/srv/clique/.env` is the only thing that runs on the droplet and is not in git. Clique has no
-secrets of its own (no database, no login), so it holds configuration only:
+secrets of its own (no database, no login), so it holds configuration only. `docker compose`
+reads it as `deploy`, so `deploy` has to own it:
 
 ```bash
+sudo tee /srv/clique/.env >/dev/null <<'EOF'
 NODE_ENV=production
 PORT=3000
 DATA_DIR=/data
 BASE_PATH=
 TAG=latest
+EOF
+sudo chown deploy:deploy /srv/clique/.env
+sudo chmod 600 /srv/clique/.env
+
+# Check it: /srv/clique owned by deploy's uid, data by 1000.
+ls -ln /srv/clique && id -u deploy
 ```
 
 To start from an existing board rather than a fresh one, copy it in before the first deploy —
-`workspace.yaml`, `projects/` and, if you want the delivery history, `events.ndjson`:
+`workspace.yaml`, `projects/` and, if you want the delivery history, `events.ndjson`. Stage it
+somewhere your own account can write, since `/srv/clique/data` belongs to uid 1000:
 
 ```bash
-# from your machine
-scp -r data/workspace.yaml data/projects deploy@<droplet>:/srv/clique/data/
-ssh deploy@<droplet> 'sudo chown -R 1000:1000 /srv/clique/data'
+# from your machine, as your own (sudo) account
+ssh <you>@<droplet> 'mkdir -p /tmp/clique-seed'
+scp -r data/workspace.yaml data/projects <you>@<droplet>:/tmp/clique-seed/
+
+# then on the droplet
+sudo cp -r /tmp/clique-seed/. /srv/clique/data/
+sudo chown -R 1000:1000 /srv/clique/data
+rm -rf /tmp/clique-seed
 ```
 
 **3. DNS and Caddy**
@@ -662,7 +687,8 @@ TAG=<good-sha> docker compose -f compose.prod.yaml up -d      # back on a known-
 That is a stopgap: `git revert` the bad commit and merge it, so the next deploy moves `latest`
 back and a later plain `up -d` doesn't bring the bad build back.
 
-**Day-to-day commands** on the droplet, all from `/srv/clique`:
+**Day-to-day commands** on the droplet, all from `/srv/clique`, as `deploy` (any other
+account needs to be in the `docker` group, or to prefix these with `sudo`):
 
 ```bash
 docker compose -f compose.prod.yaml ps          # is it up, is it healthy
