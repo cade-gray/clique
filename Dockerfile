@@ -3,7 +3,7 @@
 # Clique is one Express process that serves both the API and the built dist/, so the image
 # runs Node rather than nginx. Three stages keep the build tools and dev dependencies out of
 # the final image. This file is only for the Droplet deploy; IIS hosting still uses web.config.
-FROM node:24-alpine AS build
+FROM node:25-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -12,12 +12,12 @@ COPY src ./src
 RUN npm run build
 
 # Production dependencies only (Express and yaml), installed from the same lockfile.
-FROM node:24-alpine AS deps
+FROM node:25-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-FROM node:24-alpine AS runner
+FROM node:25-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
