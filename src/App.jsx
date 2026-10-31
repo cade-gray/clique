@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from './api.js';
+import { usePhone } from './usePhone.js';
 import ListView from './components/ListView.jsx';
 import Board from './components/Board.jsx';
 import ProjectView from './components/ProjectView.jsx';
@@ -7,6 +8,7 @@ import Settings from './components/Settings.jsx';
 import ImportView from './components/ImportView.jsx';
 import HelpView from './components/HelpView.jsx';
 import StatsView from './components/StatsView.jsx';
+import { MoreView, PhoneTabs } from './components/PhoneNav.jsx';
 
 // Hash routes keep deep links working on IIS without URL rewrite rules:
 //   #/            board view
@@ -17,6 +19,7 @@ import StatsView from './components/StatsView.jsx';
 //   #/settings    configuration: groups, project statuses and properties
 //   #/import      import from Microsoft Planner
 //   #/help        what Clique is for and how the board is used
+//   #/more        phone only: the links that don't fit in the bottom tabs
 function parseHash() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
   if (parts[0] === 'p' && parts[1]) return { view: 'project', id: parts[1], page: parts[2] || null };
@@ -25,6 +28,7 @@ function parseHash() {
   if (parts[0] === 'settings') return { view: 'settings' };
   if (parts[0] === 'import') return { view: 'import' };
   if (parts[0] === 'help') return { view: 'help' };
+  if (parts[0] === 'more') return { view: 'more' };
   return { view: 'board' };
 }
 
@@ -98,6 +102,13 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
+  // On a phone each view is its own screen, so it starts at the top. A sub-page of the same project
+  // stays put, because the project's tabs are above it.
+  const phone = usePhone();
+  useEffect(() => {
+    if (phone) window.scrollTo(0, 0);
+  }, [phone, route.view, route.id]);
+
   const loadWorkspace = useCallback(() => api.workspace().then(setWorkspace, setError), []);
   useEffect(() => {
     loadWorkspace();
@@ -146,7 +157,9 @@ export default function App() {
         )}
         {workspace && route.view === 'import' && <ImportView workspace={workspace} />}
         {workspace && route.view === 'help' && <HelpView workspace={workspace} />}
+        {route.view === 'more' && <MoreView theme={theme} onToggleTheme={toggleTheme} />}
       </main>
+      {route.view !== 'project' && <PhoneTabs view={route.view} />}
     </div>
   );
 }

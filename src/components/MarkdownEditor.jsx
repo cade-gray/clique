@@ -9,10 +9,13 @@ import '@milkdown/crepe/theme/frame.css';
 // The editor is uncontrolled: remount it (change `key`) to load different content.
 // `uploadImage(file)` stores a pasted/dropped/picked image and resolves to the src to write in the
 // markdown; `resolveImage(src)` maps that src to a URL the browser can load. Both are read once at mount.
-export default function MarkdownEditor({ value, onChange, uploadImage, resolveImage, placeholder = "Type '/' for commands" }) {
+export default function MarkdownEditor({ value, onChange, uploadImage, resolveImage, readOnly = false, placeholder = "Type '/' for commands" }) {
   const rootRef = useRef(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
+  const liveRef = useRef(null); // the editor, once it has finished loading
 
   useEffect(() => {
     let crepe = new Crepe({
@@ -44,16 +47,24 @@ export default function MarkdownEditor({ value, onChange, uploadImage, resolveIm
         if (ready && markdown !== prev) onChangeRef.current?.(markdown);
       });
     });
+    const instance = crepe;
     const created = crepe.create().then(() => {
       ready = true;
+      instance.setReadonly(readOnlyRef.current);
+      liveRef.current = instance;
     });
     return () => {
       const c = crepe;
       crepe = null;
+      liveRef.current = null;
       created.then(() => c.destroy());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    liveRef.current?.setReadonly(readOnly);
+  }, [readOnly]);
 
   return <div className="md-editor" ref={rootRef} />;
 }

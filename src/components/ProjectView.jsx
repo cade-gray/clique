@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, LIVE_STATUS } from '../api.js';
 import { navigate } from '../App.jsx';
+import { usePhone } from '../usePhone.js';
 import DocBody from './DocBody.jsx';
+import { StagePicker } from './PhoneBoard.jsx';
+import Sheet from './Sheet.jsx';
 import Subtasks from './Subtasks.jsx';
 import Updates from './Updates.jsx';
-import { PeopleContext, PropertyInput, toPeople } from './props.jsx';
+import { CardMeta, PeopleContext, PropertyInput, fitToContent, toPeople } from './props.jsx';
 
 export default function ProjectView({ id, pageId, workspace }) {
   const [project, setProject] = useState(null);
   const [error, setError] = useState(null);
   const [saveError, setSaveError] = useState(null);
+  const phone = usePhone();
 
   const load = useCallback(
     () =>
@@ -64,6 +68,32 @@ export default function ProjectView({ id, pageId, workspace }) {
   const base = `#/p/${encodeURIComponent(id)}`;
   const people = peopleFor(project, workspace);
 
+  const saveBanner = saveError && (
+    <div className="banner error doc-banner">
+      {saveError}
+      <button onClick={() => setSaveError(null)}>Dismiss</button>
+    </div>
+  );
+
+  if (phone) {
+    return (
+      <PeopleContext.Provider value={people}>
+        <PhoneProject
+          project={project}
+          pageId={pageId}
+          workspace={workspace}
+          base={base}
+          banner={saveBanner}
+          patch={patch}
+          onMeta={(meta) => setProject((p) => ({ ...p, ...meta }))}
+          onPagesChanged={load}
+          onAddPage={addPage}
+          onDelete={deleteProject}
+        />
+      </PeopleContext.Provider>
+    );
+  }
+
   return (
     <div className="project">
       <aside className="sidebar">
@@ -87,76 +117,14 @@ export default function ProjectView({ id, pageId, workspace }) {
       </aside>
 
       <div className="doc">
-        {saveError && (
-          <div className="banner error doc-banner">
-            {saveError}
-            <button onClick={() => setSaveError(null)}>Dismiss</button>
-          </div>
-        )}
+        {saveBanner}
         {pageId ? (
           <PageView key={pageId} projectId={id} pageId={pageId} onChanged={load} />
         ) : (
           <>
             <TitleInput value={project.title} onCommit={(title) => patch({ title })} />
             <PeopleContext.Provider value={people}>
-              <div className="props">
-                <div className="prop-row">
-                  <label>Status</label>
-                  <select value={project.status} onChange={(e) => patch({ status: e.target.value })}>
-                    {workspace.columns.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {(workspace.groups.length > 0 || project.group) && (
-                  <div className="prop-row">
-                    <label>Group</label>
-                    <select value={project.group ?? ''} onChange={(e) => patch({ group: e.target.value || null })}>
-                      <option value="">No group</option>
-                      {workspace.groups.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                <div className="prop-row">
-                  <label>Blocked</label>
-                  <input
-                    type="checkbox"
-                    checked={project.blocked}
-                    onChange={(e) => patch({ blocked: e.target.checked, ...(e.target.checked ? {} : { blockedReason: '' }) })}
-                  />
-                </div>
-                {project.blocked && (
-                  <div className="prop-row">
-                    <label>Reason</label>
-                    <BlockedReason value={project.blockedReason} onCommit={(blockedReason) => patch({ blockedReason })} />
-                  </div>
-                )}
-                {project.status === LIVE_STATUS && (
-                  <div className="prop-row">
-                    <label>Maintenance</label>
-                    <input type="checkbox" checked={project.maintenance} onChange={(e) => patch({ maintenance: e.target.checked })} />
-                  </div>
-                )}
-                {workspace.properties.map((def) => (
-                  <div className={`prop-row prop-row-${def.type}`} key={def.key}>
-                    <label>{def.name}</label>
-                    <PropertyInput
-                      def={def}
-                      value={project.properties[def.key]}
-                      onChange={(v) => patch({ properties: { [def.key]: v } })}
-                    />
-                  </div>
-                ))}
-                <a className="muted small" href="#/settings">
-                  Manage properties and groups
-                </a>
-              </div>
+              <ProjectProps project={project} workspace={workspace} patch={patch} />
 
               <Subtasks items={project.subtasks} projectTitle={project.title} onChange={(subtasks) => patch({ subtasks })} />
 
@@ -183,6 +151,184 @@ export default function ProjectView({ id, pageId, workspace }) {
   );
 }
 
+// Status, group, flags and the workspace's properties, edited in place.
+function ProjectProps({ project, workspace, patch }) {
+  return (
+    <div className="props">
+      <div className="prop-row">
+        <label>Status</label>
+        <select value={project.status} onChange={(e) => patch({ status: e.target.value })}>
+          {workspace.columns.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      {(workspace.groups.length > 0 || project.group) && (
+        <div className="prop-row">
+          <label>Group</label>
+          <select value={project.group ?? ''} onChange={(e) => patch({ group: e.target.value || null })}>
+            <option value="">No group</option>
+            {workspace.groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <div className="prop-row">
+        <label>Blocked</label>
+        <input
+          type="checkbox"
+          checked={project.blocked}
+          onChange={(e) => patch({ blocked: e.target.checked, ...(e.target.checked ? {} : { blockedReason: '' }) })}
+        />
+      </div>
+      {project.blocked && (
+        <div className="prop-row">
+          <label>Reason</label>
+          <BlockedReason value={project.blockedReason} onCommit={(blockedReason) => patch({ blockedReason })} />
+        </div>
+      )}
+      {project.status === LIVE_STATUS && (
+        <div className="prop-row">
+          <label>Maintenance</label>
+          <input type="checkbox" checked={project.maintenance} onChange={(e) => patch({ maintenance: e.target.checked })} />
+        </div>
+      )}
+      {workspace.properties.map((def) => (
+        <div className={`prop-row prop-row-${def.type}`} key={def.key}>
+          <label>{def.name}</label>
+          <PropertyInput
+            def={def}
+            value={project.properties[def.key]}
+            onChange={(v) => patch({ properties: { [def.key]: v } })}
+          />
+        </div>
+      ))}
+      <a className="muted small" href="#/settings">
+        Manage properties and groups
+      </a>
+    </div>
+  );
+}
+
+// A project on a phone. The first screen answers "how is this going?", and everything else is one
+// tab away instead of being stacked below it. A Live project opens on its docs, because by then
+// the page is the solution's wiki.
+function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta, onPagesChanged, onAddPage, onDelete }) {
+  const id = project.id;
+  const [tab, setTab] = useState(pageId || project.status === LIVE_STATUS ? 'docs' : 'todos');
+  // The docs stay mounted once opened, so their editor keeps its unsaved text and version
+  // while another tab is showing.
+  const [docsOpened, setDocsOpened] = useState(tab === 'docs');
+  const [pickingStage, setPickingStage] = useState(false);
+  const doneCount = project.subtasks.filter((s) => s.done).length;
+  const tabs = [
+    ['todos', project.subtasks.length ? `To-dos ${doneCount}/${project.subtasks.length}` : 'To-dos'],
+    ['updates', 'Updates'],
+    ['docs', 'Docs'],
+    ['details', 'Details'],
+  ];
+
+  function open(next) {
+    setTab(next);
+    if (next === 'docs') setDocsOpened(true);
+  }
+
+  return (
+    <div className="phone-project">
+      <a href="#/" className="phone-back">
+        ‹ Board
+      </a>
+      <div className="phone-project-top">
+        {banner}
+        <TitleInput multiline value={project.title} onCommit={(title) => patch({ title })} />
+        <div className="phone-project-meta">
+          <button className="stage-btn" aria-haspopup="dialog" onClick={() => setPickingStage(true)}>
+            {workspace.columns.find((c) => c.id === project.status)?.name ?? project.status} <span aria-hidden="true">▾</span>
+          </button>
+          <CardMeta project={project} workspace={workspace} />
+        </div>
+        {project.blocked && (
+          <div className="phone-flag blocked">
+            <strong>⛔ Blocked</strong>
+            {project.blockedReason && <span>: {project.blockedReason}</span>}
+          </div>
+        )}
+        {project.maintenance && (
+          <div className="phone-flag maintenance">
+            <strong>🔧 In maintenance</strong>
+          </div>
+        )}
+      </div>
+      <div className="project-tabs" role="tablist" aria-label="Project sections">
+        {tabs.map(([key, label]) => (
+          <button key={key} role="tab" aria-selected={tab === key} className={tab === key ? 'active' : ''} onClick={() => open(key)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="project-panel">
+        {tab === 'todos' && <Subtasks items={project.subtasks} projectTitle={project.title} onChange={(subtasks) => patch({ subtasks })} />}
+        {tab === 'updates' && <Updates projectId={id} updates={project.updates} onChange={onMeta} />}
+        {tab === 'details' && (
+          <>
+            <ProjectProps project={project} workspace={workspace} patch={patch} />
+            <div className="danger-zone">
+              <button className="danger" onClick={onDelete}>
+                Delete project
+              </button>
+            </div>
+          </>
+        )}
+        {docsOpened && (
+          <div hidden={tab !== 'docs'}>
+            <nav className="page-chips" aria-label="Pages">
+              <a href={base} className={!pageId ? 'active' : ''}>
+                Overview
+              </a>
+              {project.pages.map((p) => (
+                <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} className={pageId === p.id ? 'active' : ''}>
+                  {p.title}
+                </a>
+              ))}
+              <button aria-label="Add page" onClick={onAddPage}>
+                +
+              </button>
+            </nav>
+            <div hidden={Boolean(pageId)}>
+              <DocBody
+                readFirst
+                docKey={`project:${id}`}
+                projectId={id}
+                body={project.body}
+                version={project.version}
+                save={(body, baseVersion) => api.updateProject(id, { body, baseVersion })}
+              />
+            </div>
+            {pageId && <PageView key={pageId} projectId={id} pageId={pageId} onChanged={onPagesChanged} phone />}
+          </div>
+        )}
+      </div>
+      {pickingStage && (
+        <Sheet title="Move to stage" onClose={() => setPickingStage(false)}>
+          <StagePicker
+            columns={workspace.columns}
+            current={project.status}
+            onPick={(status) => {
+              patch({ status });
+              setPickingStage(false);
+            }}
+          />
+        </Sheet>
+      )}
+    </div>
+  );
+}
+
 // Owner suggestions: the project's group first, with everyone else on offer once a name is typed.
 // Without a group, everyone in any group (plus names already on the project) is listed.
 function peopleFor(project, workspace) {
@@ -204,7 +350,7 @@ function peopleFor(project, workspace) {
   return { label: group.name, members: group.members, others: everyone.filter((n) => !inGroup.has(n.toLowerCase())).sort(byName) };
 }
 
-function PageView({ projectId, pageId, onChanged }) {
+function PageView({ projectId, pageId, onChanged, phone = false }) {
   const [page, setPage] = useState(null);
   const [error, setError] = useState(null);
 
@@ -230,8 +376,9 @@ function PageView({ projectId, pageId, onChanged }) {
 
   return (
     <>
-      <TitleInput value={page.title} onCommit={rename} />
+      <TitleInput multiline={phone} value={page.title} onCommit={rename} />
       <DocBody
+        readFirst={phone}
         docKey={`page:${projectId}/${pageId}`}
         projectId={projectId}
         body={page.body}
@@ -260,18 +407,28 @@ function BlockedReason({ value, onCommit }) {
   );
 }
 
-function TitleInput({ value, onCommit }) {
+// `multiline` wraps a long title, for screens too narrow to show it on one line. It is still one
+// line of text, so Enter saves it.
+function TitleInput({ value, onCommit, multiline = false }) {
+  const Field = multiline ? 'textarea' : 'input';
   return (
-    <input
+    <Field
       key={value}
       className="doc-title"
       defaultValue={value}
+      rows={multiline ? 1 : undefined}
+      ref={multiline ? fitToContent : undefined}
+      onInput={multiline ? (e) => fitToContent(e.currentTarget) : undefined}
       onBlur={(e) => {
         const v = e.target.value.trim();
         if (v && v !== value) onCommit(v);
         else e.target.value = value;
       }}
-      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        e.currentTarget.blur();
+      }}
     />
   );
 }

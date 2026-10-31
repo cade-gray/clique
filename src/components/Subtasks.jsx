@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
+import { usePhone } from '../usePhone.js';
 import Popover from './Popover.jsx';
 import { downloadIcs, formatSlot, icsFilename, icsText, outlookUrl, subtaskEvent } from './calendar.js';
 import { PeopleInput, Tag, fitToContent, formatDateTime, timeAgo, toPeople } from './props.jsx';
 
 export default function Subtasks({ items, projectTitle, onChange }) {
   const [dragIndex, setDragIndex] = useState(null);
+  const phone = usePhone();
 
   // Keep each item's index in the full list so edits and reordering target the right entry.
   const entries = items.map((s, i) => ({ s, i }));
@@ -36,7 +38,7 @@ export default function Subtasks({ items, projectTitle, onChange }) {
         )}
       </h3>
       <ul>
-        {open.map(({ s, i }) => (
+        {open.map(({ s, i }, n) => (
           <li
             key={i}
             className={dragIndex === i ? 'dragging' : ''}
@@ -89,6 +91,17 @@ export default function Subtasks({ items, projectTitle, onChange }) {
               </div>
               <div className="subtask-actions">
                 <ScheduleBlock text={s.text} owners={s.owners} projectTitle={projectTitle} />
+                {/* Drag handles need a mouse, so a phone gets buttons. */}
+                {phone && open.length > 1 && (
+                  <>
+                    <button className="icon" disabled={n === 0} onClick={() => move(i, open[n - 1].i)} aria-label={`Move up: ${s.text}`}>
+                      ↑
+                    </button>
+                    <button className="icon" disabled={n === open.length - 1} onClick={() => move(i, open[n + 1].i)} aria-label={`Move down: ${s.text}`}>
+                      ↓
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             <button className="icon" onClick={() => remove(i)} title="Delete subtask">
@@ -175,7 +188,7 @@ function ScheduleBlock({ text, owners, projectTitle }) {
 
 function ScheduleMenu({ anchor, event, filename, onClose }) {
   return (
-    <Popover anchor={anchor} onClose={onClose} className="schedule-menu">
+    <Popover title="Block time to work on this" anchor={anchor} onClose={onClose} className="schedule-menu">
       <div className="popover-label">Block time to work on this</div>
       <span className="popover-hint popover-note">
         {formatSlot(event.start, event.end)} — move it to a free slot once your calendar is open.

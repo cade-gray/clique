@@ -10,11 +10,14 @@ const SAVE_DELAY_MS = 700;
 // `save(body, baseVersion)` must resolve to the saved doc ({ version }) or reject with
 // err.status === 409 and err.data.current = { body, version } when someone else saved first.
 // Images added to the body are stored in the attachments folder of project `projectId`.
-export default function DocBody({ docKey, projectId, body, version, save }) {
+// With `readFirst` the page opens read-only behind an Edit button, so that a tap while scrolling a
+// runbook on a phone doesn't bring up the keyboard.
+export default function DocBody({ docKey, projectId, body, version, save, readFirst = false }) {
   const [editorKey, setEditorKey] = useState(0);
   const [content, setContent] = useState(body);
   const [status, setStatus] = useState('saved'); // saved | pending | saving | error | conflict
   const [conflict, setConflict] = useState(null);
+  const [editing, setEditing] = useState(!readFirst);
   const versionRef = useRef(version);
   const pending = useRef(null);
   const timer = useRef(null);
@@ -78,6 +81,17 @@ export default function DocBody({ docKey, projectId, body, version, save }) {
   return (
     <div className="doc-body">
       <SaveStatus status={status} onRetry={flush} />
+      {readFirst && (
+        <button
+          className="toolbar-btn doc-edit"
+          onClick={() => {
+            if (editing) flush();
+            setEditing(!editing);
+          }}
+        >
+          {editing ? 'Done' : 'Edit page'}
+        </button>
+      )}
       {conflict && (
         <div className="banner warn">
           Someone else saved this page while you were editing.
@@ -89,6 +103,7 @@ export default function DocBody({ docKey, projectId, body, version, save }) {
         <MarkdownEditor
           key={`${docKey}:${editorKey}`}
           value={content}
+          readOnly={!editing}
           onChange={onChange}
           uploadImage={(file) => api.uploadAttachment(projectId, file)}
           resolveImage={(src) => attachmentUrl(projectId, src)}

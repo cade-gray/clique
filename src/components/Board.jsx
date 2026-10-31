@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { navigate } from '../App.jsx';
 import { activeFilters, filterFields, matches } from '../filters.js';
+import { usePhone } from '../usePhone.js';
 import FilterBar from './FilterBar.jsx';
+import PhoneBoard from './PhoneBoard.jsx';
+import { placeInColumn } from './phone.js';
 import { PropertyValue, formatDateTime, isEmpty, timeAgo } from './props.jsx';
 
 const POLL_MS = 10000;
@@ -25,6 +28,7 @@ export default function Board({ workspace, filters, onFilters }) {
   const [query, setQuery] = useState('');
   const [drag, setDrag] = useState(null); // { id, over: { status, index } }
   const [adding, setAdding] = useState(null); // column id with the "new project" input open
+  const phone = usePhone();
 
   const load = useCallback(() => api.projects().then(setProjects).catch(() => {}), []);
 
@@ -62,17 +66,23 @@ export default function Board({ workspace, filters, onFilters }) {
     let index = drag.over.index;
     const oldIndex = col.items.findIndex((p) => p.id === drag.id);
     if (oldIndex !== -1 && oldIndex < index) index--;
-    // Place the card among every project in the column, including ones hidden by a search or
-    // filter: just before the visible card it was dropped on, or just after the last visible one.
-    const visible = col.items.filter((p) => p.id !== drag.id);
-    const all = projects
-      .filter((p) => p.status === status && p.id !== drag.id)
-      .sort((a, b) => a.order - b.order)
-      .map((p) => p.id);
-    const pos = visible[index] ? all.indexOf(visible[index].id) : visible.length ? all.indexOf(visible[visible.length - 1].id) + 1 : all.length;
-    const ids = [...all];
-    ids.splice(pos, 0, drag.id);
     setDrag(null);
+    await place(drag.id, status, index);
+  }
+
+  // Put a project at `index` among the visible cards of a column, leaving out the project itself.
+  // Projects hidden by a search or filter keep their place. A column hidden by a status filter
+  // has no visible cards, so the project goes to its end.
+  async function place(id, status, index) {
+    const ids = placeInColumn({
+      allIds: projects
+        .filter((p) => p.status === status)
+        .sort((a, b) => a.order - b.order)
+        .map((p) => p.id),
+      visibleIds: columns.find((c) => c.id === status)?.items.map((p) => p.id) ?? [],
+      id,
+      index,
+    });
 
     // Optimistic update, then persist.
     setProjects((prev) =>
@@ -101,6 +111,24 @@ export default function Board({ workspace, filters, onFilters }) {
   }
 
   if (!projects) return <div className="loading">Loading…</div>;
+
+  if (phone) {
+    return (
+      <PhoneBoard
+        workspace={workspace}
+        columns={columns}
+        projects={projects}
+        shownCount={shownCount}
+        query={query}
+        onQuery={setQuery}
+        filterBar={<FilterBar fields={fields} projects={projects} filters={filters} onChange={onFilters} />}
+        filtersActive={activeFilters(filters, fields).length > 0}
+        defaultGroup={lastGroup(workspace.groups)}
+        onCreate={create}
+        onPlace={place}
+      />
+    );
+  }
 
   return (
     <div className="board-wrap">

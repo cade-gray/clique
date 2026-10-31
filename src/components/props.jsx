@@ -1,6 +1,7 @@
 // Display and edit helpers for the globally defined properties.
 
 import { createContext, useContext, useState } from 'react';
+import { cardSummary } from './phone.js';
 
 export const COLORS = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
 
@@ -175,6 +176,19 @@ export function PropertyValue({ def, value, showLabel = true }) {
         </span>
       );
   }
+}
+
+// The one line of properties on a compact phone card or row.
+export function CardMeta({ project, workspace }) {
+  const { tag, people, date } = cardSummary(project, workspace.properties);
+  const text = [people.join(', '), date && formatDate(date)].filter(Boolean).join(' · ');
+  if (!tag && !text) return null;
+  return (
+    <div className="card-meta">
+      {tag && <Tag color={tag.color}>{tag.value}</Tag>}
+      {text && <span>{text}</span>}
+    </div>
+  );
 }
 
 export function formatDate(v) {

@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { describeFilters, filterFields, matches } from '../filters.js';
+import { usePhone } from '../usePhone.js';
 import FilterBar from './FilterBar.jsx';
 import Popover from './Popover.jsx';
-import { PropertyValue, Tag, formatDate, formatDateTime, isEmpty, timeAgo, toPeople } from './props.jsx';
+import { CardMeta, PropertyValue, Tag, formatDate, formatDateTime, isEmpty, timeAgo, toPeople } from './props.jsx';
 
 const POLL_MS = 10000;
 
@@ -63,6 +64,7 @@ export default function ListView({ workspace, filters, onFilters }) {
   const [sort, setSort] = useState({ id: 'status', dir: 1 });
   const [columnsOpen, setColumnsOpen] = useState(false);
   const columnsRef = useRef(null);
+  const phone = usePhone();
 
   useEffect(() => {
     const load = () => api.projects({ subtasks: true }).then(setProjects).catch(() => {});
@@ -181,6 +183,43 @@ export default function ListView({ workspace, filters, onFilters }) {
 
   const blockedCount = projects.filter((p) => p.blocked).length;
 
+  if (phone) {
+    return (
+      <div className="list-wrap phone-list">
+        <div className="phone-list-tools">
+          <input className="search" type="search" aria-label="Search projects" placeholder="Search…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <FilterBar fields={fields} projects={projects} filters={filters} onChange={onFilters} />
+          <div className="phone-list-sort">
+            <span className="muted small">
+              {rows.length === projects.length ? `${projects.length} projects` : `${rows.length} of ${projects.length} projects`}
+              {blockedCount > 0 && ` · ${blockedCount} blocked`}
+            </span>
+            <span className="spacer" />
+            <select aria-label="Sort by" value={sort.id} onChange={(e) => setSort({ id: e.target.value, dir: 1 })}>
+              {columns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <button className="icon" aria-label={sort.dir === 1 ? 'Sorted ascending, switch to descending' : 'Sorted descending, switch to ascending'} onClick={() => setSort((s) => ({ ...s, dir: -s.dir }))}>
+              {sort.dir === 1 ? '▲' : '▼'}
+            </button>
+          </div>
+        </div>
+        <ul className="phone-rows">
+          {rows.map((p) => (
+            <PhoneRow key={p.id} project={p} workspace={workspace} status={statusName(p)} />
+          ))}
+          {rows.length === 0 && <li className="muted empty">No projects match.</li>}
+        </ul>
+        <button className="toolbar-btn phone-export" onClick={exportCsv} disabled={rows.length === 0}>
+          Export CSV
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="list-wrap">
       <div className="board-toolbar list-toolbar">
@@ -295,6 +334,39 @@ export default function ListView({ workspace, filters, onFilters }) {
       </div>
       <p className="muted small print-only">Exported {new Date().toLocaleString()}</p>
     </div>
+  );
+}
+
+function PhoneRow({ project, workspace, status }) {
+  const { done, total } = project.subtasks;
+  return (
+    <li className={`phone-row-item ${project.blocked ? 'blocked' : ''}`}>
+      <a href={`#/p/${encodeURIComponent(project.id)}`}>
+        <div className="phone-row-top">
+          <span className="phone-row-title">{project.title}</span>
+          {total > 0 && (
+            <span className="muted small">
+              {done}/{total}
+            </span>
+          )}
+        </div>
+        {project.blocked && (
+          <div className="card-blocked">
+            <strong>⛔ Blocked</strong>
+            {project.blockedReason && <span>: {project.blockedReason}</span>}
+          </div>
+        )}
+        {project.maintenance && (
+          <div className="card-maintenance">
+            <strong>🔧 In maintenance</strong>
+          </div>
+        )}
+        <div className="phone-row-meta">
+          <Tag>{status}</Tag>
+          <CardMeta project={project} workspace={workspace} />
+        </div>
+      </a>
+    </li>
   );
 }
 
