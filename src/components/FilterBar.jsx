@@ -50,7 +50,7 @@ export default function FilterBar({ fields, projects, filters, onChange }) {
             + Filter
           </button>
           {open === 'add' && (
-            <Popover anchor={addRef} onClose={() => setOpen(null)} className="filter-menu">
+            <Popover title="Filter by" anchor={addRef} onClose={() => setOpen(null)} className="filter-menu">
               <div className="popover-label">Filter by</div>
               {available.map((field) => (
                 <button
@@ -112,7 +112,7 @@ function FilterChip({ filter, field, base, open, onToggle, onClose, onValues, on
         </button>
       </span>
       {open && (
-        <Popover anchor={chipRef} onClose={onClose} className="filter-menu">
+        <Popover title={field.label} anchor={chipRef} onClose={onClose} className="filter-menu">
           <div className="popover-label">{field.label}</div>
           {field.hint && <div className="popover-hint popover-note">{field.hint}</div>}
           {field.options.length > 8 && (
