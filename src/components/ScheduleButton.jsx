@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import Popover from './Popover.jsx';
-import { downloadIcs, formatSlot, icsFilename, icsText, openIcs, outlookUrl, subtaskEvent } from './calendar.js';
+import { downloadIcs, formatSlot, googleUrl, icsFilename, icsText, outlookUrl, subtaskEvent } from './calendar.js';
 import { toPeople } from './props.jsx';
 
 // Books time to work on a to-do. Clique hands the event to a calendar and keeps nothing: there is
@@ -39,15 +39,9 @@ function ScheduleMenu({ anchor, event, filename, onClose }) {
       <span className="popover-hint popover-note">
         {formatSlot(event.start, event.end)} — move it to a free slot once your calendar is open.
       </span>
-      <button
-        className="popover-item"
-        onClick={() => {
-          openIcs(icsText(event));
-          onClose();
-        }}
-      >
-        Default calendar
-      </button>
+      <a className="popover-item" href={googleUrl(event)} target="_blank" rel="noreferrer" onClick={onClose}>
+        Google Calendar <span className="muted">↗</span>
+      </a>
       <a className="popover-item" href={outlookUrl(event)} target="_blank" rel="noreferrer" onClick={onClose}>
         Outlook on the web <span className="muted">↗</span>
       </a>

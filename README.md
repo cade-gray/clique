@@ -21,7 +21,7 @@ Each project is more than a ticket:
 - **Properties** shared by every project (owners, systems, go-live date, priority, or whatever your team needs) show on the card, so the board doubles as an inventory of what's been built.
 - **Pages**: an overview plus as many sub-pages as you like (design, field mapping, runbook, meeting notes), edited Notion-style with markdown that renders as you type, tables, and code blocks with a copy button.
 - **Status updates** keep a dated record of decisions and progress; the latest one shows on the card.
-- **To-dos** with owners and history, each able to book a working block in Outlook or any calendar that reads `.ics`, plus **Blocked** and **Maintenance** flags that stand out on the board.
+- **To-dos** with owners and history, each able to book a working block in Google Calendar, Outlook or any calendar that reads `.ics`, plus **Blocked** and **Maintenance** flags that stand out on the board.
 - **List view** for a sortable, printable, CSV-exportable view of everything, for management reports or audits.
 
 Everything is stored as plain markdown files on disk (Obsidian-style), so the documentation outlives the tool: it can be read, searched, backed up or put in git without Clique. There is no database and no login yet; everyone who can reach the site edits the same board.
@@ -32,7 +32,7 @@ Requires Node.js 20.19+ (22 LTS recommended).
 
 ```bash
 npm install
-npm run dev        # API on :3001 and Vite dev server on :5173 with hot reload
+npm run dev        # API on :3001 and Vite dev server on :5173 with hot reload, also reachable from your network
 ```
 
 Production:
@@ -218,7 +218,7 @@ Property, status and to-do changes save immediately. Each property and the statu
 - **Blocked**: tick Blocked on a project to outline its card in red; an optional reason shows on the card (`blocked` / `blockedReason` in the frontmatter).
 - **Maintenance**: projects in the **Live** column have a Maintenance checkbox that outlines the card in yellow (`maintenance` in the frontmatter). A project that is both blocked and in maintenance gets a yellow outline with a red one around it. Moving a project out of Live hides the flag; it comes back if the project returns to Live.
 - **Groups**: define teams and their people under Configuration. Pick a project's group when creating it on the board (the last one you used is preselected) or on the project page. Owner fields on the project and its to-dos then open a dropdown of that group's members; other people show up as you type, and any other name can still be typed in. The group shows on the card and as a column in the list view and CSV.
-- **To-dos**: check off, edit inline, drag to reorder (a blue line shows where the to-do will land), assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.) **📅 Schedule** books time to work on one: it offers **Default calendar**, which hands the event to the device (a phone offers to add it, and a computer saves a `.ics` file for its calendar app to open), Outlook on the web, which opens a pre-filled draft, or a `.ics` download for desktop Outlook, Apple Calendar and the rest. The block starts as an hour at 9am tomorrow and is meant to be dragged to a free slot in the calendar itself, where the day's conflicts are visible. Nothing is saved in Clique, so it never claims to know what your calendar actually holds.
+- **To-dos**: check off, edit inline, drag to reorder (a blue line shows where the to-do will land), assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.) **📅 Schedule** books time to work on one: it offers Google Calendar and Outlook on the web, which open a pre-filled draft, or a `.ics` download for desktop Outlook, Apple Calendar and the rest. The block starts as an hour at 9am tomorrow and is meant to be dragged to a free slot in the calendar itself, where the day's conflicts are visible. Nothing is saved in Clique, so it never claims to know what your calendar actually holds.
 - **GitHub issues**: give a project its **GitHub repo** and each open to-do gets **🔗 Issue**. **Create on GitHub** opens GitHub's new-issue form in a new tab with the to-do filled in; submit it there, then paste its link or number back into Clique to link it. An existing issue is linked the same way, as long as it's in that repo. The to-do then shows the issue number as a link, and **×** unlinks it. Clique holds no GitHub login, so issues are created under each person's own account, and it doesn't read an issue's state: closing one doesn't check off the to-do.
 - **Global properties** (Configuration screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
 - **Import from Microsoft Planner**: turn a Planner plan into projects, one per task. See below.
