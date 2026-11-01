@@ -58,7 +58,7 @@ export default function HelpView({ workspace }) {
           <li>
             <strong>Pages</strong>: an overview plus as many sub-pages as needed (design, field mapping, runbook, meeting notes). Type <code>/</code> for
             headings, tables, code blocks and more; paste screenshots straight in. General pages sit under <strong>Wiki</strong>; a page written for one
-            to-do sits under <strong>To-do docs</strong>.
+            to-do sits under <strong>To-do notes</strong>.
           </li>
           <li>
             <strong>Status updates</strong>: a dated record of decisions and progress. The latest one shows on the card.

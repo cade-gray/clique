@@ -133,8 +133,8 @@ export default function Subtasks({ items, pages, base, repo, projectTitle, onCha
                 {s.doc ? (
                   <TodoDoc page={docOf(s, pages)} base={base} onOpen={onOpenDoc} />
                 ) : (
-                  <button className="add-doc" onClick={() => onAddDoc(i)} title="Write a doc for this to-do">
-                    📝 Add doc
+                  <button className="add-doc" onClick={() => onAddDoc(i)} title="Write notes for this to-do">
+                    📝 Add notes
                   </button>
                 )}
                 {s.issue ? (
@@ -209,8 +209,8 @@ export default function Subtasks({ items, pages, base, repo, projectTitle, onCha
 function TodoDoc({ page, base, onOpen }) {
   if (!page) return null;
   return (
-    <a className="subtask-doc" href={`${base}/${encodeURIComponent(page.id)}`} title={page.title} aria-label={`Docs: ${page.title}`} onClick={onOpen}>
-      📝 Docs
+    <a className="subtask-doc" href={`${base}/${encodeURIComponent(page.id)}`} title={page.title} aria-label={`Notes: ${page.title}`} onClick={onOpen}>
+      📝 Notes
     </a>
   );
 }

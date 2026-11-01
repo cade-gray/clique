@@ -1,6 +1,6 @@
-// How a project's pages divide into wiki pages and to-do docs. No React here, so they can be unit tested.
+// How a project's pages divide into wiki pages and to-do notes. No React here, so they can be unit tested.
 
-// A page is a to-do doc while a to-do links to it; every other page belongs to the project's wiki.
+// A page is to-do notes while a to-do links to it; every other page belongs to the project's wiki.
 export function splitPages(pages, subtasks) {
   const linked = new Set(subtasks.map((s) => s.doc));
   return { wiki: pages.filter((p) => !linked.has(p.id)), todoDocs: pages.filter((p) => linked.has(p.id)) };

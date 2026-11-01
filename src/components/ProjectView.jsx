@@ -58,7 +58,7 @@ export default function ProjectView({ id, pageId, workspace }) {
     navigate(`#/p/${encodeURIComponent(id)}/${encodeURIComponent(page.id)}`);
   }
 
-  // A to-do doc is an ordinary page named after the to-do, with its id on the to-do. If the second
+  // To-do notes are an ordinary page named after the to-do, with its id on the to-do. If the second
   // step fails, the page is still there, in the wiki. The guard stops a double click making two.
   async function addTodoDoc(index) {
     if (addingDoc.current) return;
@@ -68,7 +68,7 @@ export default function ProjectView({ id, pageId, workspace }) {
       await patch({ subtasks: project.subtasks.map((s, i) => (i === index ? { ...s, doc: page.id } : s)) });
       navigate(`#/p/${encodeURIComponent(id)}/${encodeURIComponent(page.id)}`);
     } catch (e) {
-      setSaveError(`The doc was not created: ${e.message}`);
+      setSaveError(`The notes were not created: ${e.message}`);
     } finally {
       addingDoc.current = false;
     }
@@ -137,7 +137,7 @@ export default function ProjectView({ id, pageId, workspace }) {
         </button>
         {todoDocs.length > 0 && (
           <nav className="pages">
-            <div className="pages-heading">To-do docs</div>
+            <div className="pages-heading">To-do notes</div>
             {todoDocs.map((p) => (
               <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} className={pageId === p.id ? 'active' : ''} title={todoOf(p.id, project.subtasks).text}>
                 📝 {p.title}
@@ -282,7 +282,7 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
     if (next === 'docs') setDocsOpened(true);
   }
 
-  // To-dos link to their docs, which live on another tab. The back button can land here too.
+  // To-dos link to their notes, which live on another tab. The back button can land here too.
   useEffect(() => {
     if (pageId) open('docs');
   }, [pageId]);
@@ -361,8 +361,8 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
               </button>
             </nav>
             {todoDocs.length > 0 && (
-              <nav className="page-chips" aria-label="To-do docs">
-                <span className="page-chips-label">To-do docs</span>
+              <nav className="page-chips" aria-label="To-do notes">
+                <span className="page-chips-label">To-do notes</span>
                 {todoDocs.map((p) => (
                   <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} className={pageId === p.id ? 'active' : ''}>
                     {p.title}
