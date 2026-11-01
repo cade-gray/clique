@@ -221,6 +221,7 @@ function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd
         {project.maintenance && (
           <div className="card-maintenance">
             <strong>🔧 In maintenance</strong>
+            {project.maintenanceReason && <span>: {project.maintenanceReason}</span>}
           </div>
         )}
         <div className="card-props">

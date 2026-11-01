@@ -15,9 +15,11 @@ import { createHash, randomUUID } from 'node:crypto';
 import YAML from 'yaml';
 import { EventLog } from './events.js';
 
+// `maintenance` is derived from the open to-dos and never written, but it stays reserved so the
+// leftover key in a file saved by an older version doesn't show up as a custom property.
 export const RESERVED_KEYS = ['title', 'status', 'order', 'group', 'repo', 'repos', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
 
-// The column for projects that are in production. Only projects here can be flagged as in maintenance.
+// The column for projects that are in production. Only projects here can be in maintenance.
 export const LIVE_STATUS = 'live';
 // The column for retired projects. Neither of these counts as work in flight.
 export const GRAVEYARD_STATUS = 'graveyard';
@@ -355,6 +357,10 @@ export class Store {
     const props = {};
     for (const [k, v] of Object.entries(data)) if (!RESERVED_KEYS.includes(k)) props[k] = v;
     const status = ws.columns.some((c) => c.id === data.status) ? data.status : defaultStatus(ws);
+    // A live project with work still open on it is in maintenance: nobody sets the flag by hand,
+    // so it goes away by itself when the last to-do is checked off.
+    const open = subtasks.filter((s) => !s.done);
+    const maintenance = status === LIVE_STATUS && open.length > 0;
     return {
       id,
       title: data.title || id,
@@ -368,8 +374,10 @@ export class Store {
       updateCount: updates.length,
       blocked: data.blocked === true,
       blockedReason: data.blocked === true ? String(data.blockedReason ?? '') : '',
-      // The flag stays in the file if the project leaves Live, and shows again if it comes back.
-      maintenance: data.maintenance === true && status === LIVE_STATUS,
+      maintenance,
+      // The one open to-do is the reason; past that, the count is, because a list of them
+      // wouldn't fit on a card.
+      maintenanceReason: !maintenance ? '' : open.length === 1 ? open[0].text : `${open.length} to-dos open`,
       // Everyone who owns a to-do, so views can filter by person without loading every to-do.
       subtasks: { done: subtasks.filter((s) => s.done).length, total: subtasks.length, owners: normalizePeople(subtasks.flatMap((s) => s.owners ?? [])) },
       created: data.created ?? null,
@@ -478,10 +486,6 @@ export class Store {
         if (reason && data.blocked === true) data.blockedReason = reason;
         else delete data.blockedReason;
       }
-      if (patch.maintenance !== undefined) {
-        if (patch.maintenance) data.maintenance = true;
-        else delete data.maintenance;
-      }
       if (patch.subtasks !== undefined) data.subtasks = normalizeSubtasks(patch.subtasks);
       if (patch.properties) {
         for (const [k, v] of Object.entries(patch.properties)) {
@@ -491,6 +495,9 @@ export class Store {
           else data[k] = val;
         }
       }
+      // Maintenance is worked out from the to-dos now, so a file written by an older version
+      // loses its stale flag the next time the project is saved.
+      delete data.maintenance;
       data.updated = now();
       await writeFileAtomic(file, stringifyMarkdown(data, patch.body ?? doc.body));
       if (data.status !== statusBefore)
