@@ -182,6 +182,7 @@ subtasks:                    # shown as "To-dos" in the app
     done: true
     doneAt: 2026-10-01T12:00:00.000Z   # set when checked off; feeds the History section
     owners: [Sam]            # optional, any number per to-do
+    docs: [wireframe-notes]  # optional; pages in this folder written for this to-do
 updates:                     # status updates, oldest first
   - id: a1b2c3d4
     at: 2026-10-02T15:00:00.000Z
@@ -201,14 +202,15 @@ The folder can be opened as an Obsidian vault, edited by hand, backed up, or put
 
 ### Shared editing
 
-Property, status and to-do changes save immediately. Each property and the status merge per field; the to-do list is saved as a whole, so if two people edit the to-dos of the same project at the same moment, the later save wins. Status updates are appended, so simultaneous posts are all kept. Page bodies autosave after a short pause; if someone else saved the same page in the meantime, the editor shows a banner to load their version or overwrite with yours instead of silently clobbering it.
+Property, status and to-do changes save immediately. Each property and the status merge per field; the to-do list is saved as a whole, so if two people edit the to-dos of the same project at the same moment, the later save wins, and that covers which docs each to-do links to. Status updates are appended, so simultaneous posts are all kept. Page bodies autosave after a short pause; if someone else saved the same page in the meantime, the editor shows a banner to load their version or overwrite with yours instead of silently clobbering it.
 
 ## Features
 
 - **Filters** (board and list view): **+ Filter** adds a filter on status, group, person (owns the project or one of its to-dos), flags (blocked / in maintenance), or any select, multi-select, people, checkbox or date property. Each filter is a chip with a checkbox per value and a count of matching projects; checking several values in one filter shows projects with any of them, and separate filters must all match. A status filter on the board hides the other columns. Filters are shared by both views and remembered in the browser.
 - **List view**: every project in a sortable table (status, group, blocked + reason, each property, to-do progress, last updated) with each project's to-dos (with owners) listed beneath it. **Columns** picks which columns show and whether to list to-dos, finished to-dos and to-do owners, so a report can be trimmed for management; the choice is remembered in the browser. **Export CSV** downloads exactly what is shown (opens in Excel/Sheets); with to-dos on, there is one row per to-do that repeats the project columns, so it can be filtered or pivoted. **Print / PDF** gives a clean light-themed report of the same, with a line saying which filters were applied.
 - **Board view**: columns are statuses; drag cards between and within columns (with filters on, a dropped card lands next to the visible card it was dropped by); search titles and filter as above; card shows properties and to-do progress.
-- **Project pages**: an overview plus any number of sub-pages from the sidebar.
+- **Project pages**: an overview plus any number of sub-pages from the sidebar, in two sections: **Wiki** for the project's general docs and **To-do docs** for pages written for a specific to-do. On a phone these are two rows of chips on the Docs tab.
+- **To-do docs**: **📝 Add doc** on a to-do creates a page linked to it, titled after the to-do unless you change it. The to-do lists its docs, and each doc says which to-do it belongs to. The link is the `docs` list on the to-do, so it survives rewording, reordering and checking off. Deleting a to-do keeps its docs, which move to the Wiki section; deleting a doc removes it from the to-do.
 - **Editor** ([Milkdown Crepe](https://milkdown.dev)): live markdown, `/` menu for headings, lists, task lists, tables, quotes, code blocks (syntax highlighting, language picker, copy button), images and math.
 - **Status updates**: a comment-style timeline on each project (`updates` in the frontmatter, newest first, with an optional name). The latest update shows on the board card and in the list view and CSV.
 - **Blocked**: tick Blocked on a project to outline its card in red; an optional reason shows on the card (`blocked` / `blockedReason` in the frontmatter).
@@ -757,5 +759,6 @@ src/components/PhoneBoard.jsx  the board on a phone: swipeable stages, compact c
 src/components/PhoneNav.jsx    bottom tabs and the More screen
 src/components/Sheet.jsx       bottom sheet; Popover opens as one on a phone
 src/components/phone.js        pure helpers for card placement and compact cards, with tests in phone.test.js
+src/components/pages.js        pure helpers that split a project's pages into wiki pages and to-do docs, with tests in pages.test.js
 src/components/charts.jsx  bars, stacked bars, columns, tiles and meters built from divs (no charting library)
 ```

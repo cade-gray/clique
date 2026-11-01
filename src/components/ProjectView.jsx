@@ -3,6 +3,7 @@ import { api, LIVE_STATUS } from '../api.js';
 import { navigate } from '../App.jsx';
 import { usePhone } from '../usePhone.js';
 import DocBody from './DocBody.jsx';
+import { splitPages, todoOf } from './pages.js';
 import { StagePicker } from './PhoneBoard.jsx';
 import Sheet from './Sheet.jsx';
 import Subtasks from './Subtasks.jsx';
@@ -56,6 +57,20 @@ export default function ProjectView({ id, pageId, workspace }) {
     navigate(`#/p/${encodeURIComponent(id)}/${encodeURIComponent(page.id)}`);
   }
 
+  // A to-do doc is an ordinary page with its id on the to-do. If the second step fails, the page
+  // is still there, in the wiki.
+  async function addTodoDoc(index) {
+    const title = window.prompt('Doc title', project.subtasks[index].text);
+    if (!title?.trim()) return;
+    try {
+      const page = await api.createPage(id, { title });
+      await patch({ subtasks: project.subtasks.map((s, i) => (i === index ? { ...s, docs: [...(s.docs ?? []), page.id] } : s)) });
+      navigate(`#/p/${encodeURIComponent(id)}/${encodeURIComponent(page.id)}`);
+    } catch (e) {
+      setSaveError(`The doc was not created: ${e.message}`);
+    }
+  }
+
   async function deleteProject() {
     if (!window.confirm(`Delete "${project.title}"? It will be moved to the trash folder on the server.`)) return;
     await api.deleteProject(id);
@@ -67,6 +82,7 @@ export default function ProjectView({ id, pageId, workspace }) {
 
   const base = `#/p/${encodeURIComponent(id)}`;
   const people = peopleFor(project, workspace);
+  const { wiki, todoDocs } = splitPages(project.pages, project.subtasks);
 
   const saveBanner = saveError && (
     <div className="banner error doc-banner">
@@ -88,6 +104,7 @@ export default function ProjectView({ id, pageId, workspace }) {
           onMeta={(meta) => setProject((p) => ({ ...p, ...meta }))}
           onPagesChanged={load}
           onAddPage={addPage}
+          onAddTodoDoc={addTodoDoc}
           onDelete={deleteProject}
         />
       </PeopleContext.Provider>
@@ -105,7 +122,8 @@ export default function ProjectView({ id, pageId, workspace }) {
           <a href={base} className={!pageId ? 'active' : ''}>
             📋 Overview
           </a>
-          {project.pages.map((p) => (
+          <div className="pages-heading">Wiki</div>
+          {wiki.map((p) => (
             <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} className={pageId === p.id ? 'active' : ''}>
               📄 {p.title}
             </a>
@@ -114,19 +132,36 @@ export default function ProjectView({ id, pageId, workspace }) {
         <button className="add-page" onClick={addPage}>
           + Add page
         </button>
+        {todoDocs.length > 0 && (
+          <nav className="pages">
+            <div className="pages-heading">To-do docs</div>
+            {todoDocs.map((p) => (
+              <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} className={pageId === p.id ? 'active' : ''} title={todoOf(p.id, project.subtasks).text}>
+                📝 {p.title}
+              </a>
+            ))}
+          </nav>
+        )}
       </aside>
 
       <div className="doc">
         {saveBanner}
         {pageId ? (
-          <PageView key={pageId} projectId={id} pageId={pageId} onChanged={load} />
+          <PageView key={pageId} projectId={id} pageId={pageId} todo={todoOf(pageId, project.subtasks)} onChanged={load} />
         ) : (
           <>
             <TitleInput value={project.title} onCommit={(title) => patch({ title })} />
             <PeopleContext.Provider value={people}>
               <ProjectProps project={project} workspace={workspace} patch={patch} />
 
-              <Subtasks items={project.subtasks} projectTitle={project.title} onChange={(subtasks) => patch({ subtasks })} />
+              <Subtasks
+                items={project.subtasks}
+                pages={project.pages}
+                base={base}
+                projectTitle={project.title}
+                onChange={(subtasks) => patch({ subtasks })}
+                onAddDoc={addTodoDoc}
+              />
 
               <Updates projectId={id} updates={project.updates} onChange={(meta) => setProject((p) => ({ ...p, ...meta }))} />
             </PeopleContext.Provider>
@@ -218,7 +253,7 @@ function ProjectProps({ project, workspace, patch }) {
 // A project on a phone. The first screen answers "how is this going?", and everything else is one
 // tab away instead of being stacked below it. A Live project opens on its docs, because by then
 // the page is the solution's wiki.
-function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta, onPagesChanged, onAddPage, onDelete }) {
+function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta, onPagesChanged, onAddPage, onAddTodoDoc, onDelete }) {
   const id = project.id;
   const [tab, setTab] = useState(pageId || project.status === LIVE_STATUS ? 'docs' : 'todos');
   // The docs stay mounted once opened, so their editor keeps its unsaved text and version
@@ -226,6 +261,7 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
   const [docsOpened, setDocsOpened] = useState(tab === 'docs');
   const [pickingStage, setPickingStage] = useState(false);
   const doneCount = project.subtasks.filter((s) => s.done).length;
+  const { wiki, todoDocs } = splitPages(project.pages, project.subtasks);
   const tabs = [
     ['todos', project.subtasks.length ? `To-dos ${doneCount}/${project.subtasks.length}` : 'To-dos'],
     ['updates', 'Updates'],
@@ -237,6 +273,11 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
     setTab(next);
     if (next === 'docs') setDocsOpened(true);
   }
+
+  // To-dos link to their docs, which live on another tab. The back button can land here too.
+  useEffect(() => {
+    if (pageId) open('docs');
+  }, [pageId]);
 
   return (
     <div className="phone-project">
@@ -272,7 +313,17 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
         ))}
       </div>
       <div className="project-panel">
-        {tab === 'todos' && <Subtasks items={project.subtasks} projectTitle={project.title} onChange={(subtasks) => patch({ subtasks })} />}
+        {tab === 'todos' && (
+          <Subtasks
+            items={project.subtasks}
+            pages={project.pages}
+            base={base}
+            projectTitle={project.title}
+            onChange={(subtasks) => patch({ subtasks })}
+            onAddDoc={onAddTodoDoc}
+            onOpenDoc={() => open('docs')}
+          />
+        )}
         {tab === 'updates' && <Updates projectId={id} updates={project.updates} onChange={onMeta} />}
         {tab === 'details' && (
           <>
@@ -286,11 +337,12 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
         )}
         {docsOpened && (
           <div hidden={tab !== 'docs'}>
-            <nav className="page-chips" aria-label="Pages">
+            <nav className="page-chips" aria-label="Wiki">
+              <span className="page-chips-label">Wiki</span>
               <a href={base} className={!pageId ? 'active' : ''}>
                 Overview
               </a>
-              {project.pages.map((p) => (
+              {wiki.map((p) => (
                 <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} className={pageId === p.id ? 'active' : ''}>
                   {p.title}
                 </a>
@@ -299,6 +351,16 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
                 +
               </button>
             </nav>
+            {todoDocs.length > 0 && (
+              <nav className="page-chips" aria-label="To-do docs">
+                <span className="page-chips-label">To-do docs</span>
+                {todoDocs.map((p) => (
+                  <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} className={pageId === p.id ? 'active' : ''}>
+                    {p.title}
+                  </a>
+                ))}
+              </nav>
+            )}
             <div hidden={Boolean(pageId)}>
               <DocBody
                 readFirst
@@ -309,7 +371,17 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
                 save={(body, baseVersion) => api.updateProject(id, { body, baseVersion })}
               />
             </div>
-            {pageId && <PageView key={pageId} projectId={id} pageId={pageId} onChanged={onPagesChanged} phone />}
+            {pageId && (
+              <PageView
+                key={pageId}
+                projectId={id}
+                pageId={pageId}
+                todo={todoOf(pageId, project.subtasks)}
+                onChanged={onPagesChanged}
+                onOpenTodo={() => open('todos')}
+                phone
+              />
+            )}
           </div>
         )}
       </div>
@@ -350,7 +422,7 @@ function peopleFor(project, workspace) {
   return { label: group.name, members: group.members, others: everyone.filter((n) => !inGroup.has(n.toLowerCase())).sort(byName) };
 }
 
-function PageView({ projectId, pageId, onChanged, phone = false }) {
+function PageView({ projectId, pageId, todo, onChanged, onOpenTodo, phone = false }) {
   const [page, setPage] = useState(null);
   const [error, setError] = useState(null);
 
@@ -377,6 +449,15 @@ function PageView({ projectId, pageId, onChanged, phone = false }) {
   return (
     <>
       <TitleInput multiline={phone} value={page.title} onCommit={rename} />
+      {todo && (
+        <div className="page-todo">
+          To-do:{' '}
+          <a href={`#/p/${encodeURIComponent(projectId)}`} onClick={onOpenTodo}>
+            {todo.text}
+          </a>
+          {todo.done && <span className="muted"> (done)</span>}
+        </div>
+      )}
       <DocBody
         readFirst={phone}
         docKey={`page:${projectId}/${pageId}`}

@@ -304,11 +304,13 @@ table.list .col-title a:hover { text-decoration: underline; }
 .pages a { padding: 5px 8px; border-radius: 6px; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pages a:hover { background: var(--hover); }
 .pages a.active { background: var(--active); font-weight: 500; }
+.pages-heading { padding: 10px 8px 2px; color: var(--muted); font-size: 12px; font-weight: 600; }
 .add-page { border: none; background: none; text-align: left; padding: 5px 8px; color: var(--muted); border-radius: 6px; }
 .add-page:hover { background: var(--hover); color: var(--text); }
 
 .doc { flex: 1; min-width: 0; max-width: 900px; margin: 0 auto; padding: 32px 48px 80px; background: var(--panel); }
 .doc-title { width: 100%; font-size: 34px; font-weight: 700; border: none; outline: none; padding: 4px 0; margin-bottom: 12px; background: transparent; }
+.page-todo { margin: -6px 0 12px; color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
 
 .props { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
 .prop-row { display: flex; align-items: center; gap: 12px; min-height: 32px; }
@@ -382,8 +384,11 @@ ul.people-menu .people-menu-label, ul.people-menu .people-menu-label:hover { bac
 .subtask-meta, .subtask-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-left: 4px; }
 .subtask-meta:empty { display: none; }
 .schedule { position: relative; display: inline-block; }
-.schedule-btn { border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; background: transparent; color: var(--muted); font-size: 13px; }
-.schedule-btn:hover { background: var(--hover); color: var(--text); }
+.schedule-btn, .add-doc { border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; background: transparent; color: var(--muted); font-size: 13px; }
+.schedule-btn:hover, .add-doc:hover { background: var(--hover); color: var(--text); }
+.subtask-docs { display: flex; flex-wrap: wrap; gap: 2px 10px; padding: 2px 4px; font-size: 13px; overflow-wrap: anywhere; }
+.subtask-docs a, .page-todo a { color: var(--accent); }
+.subtask-docs a:hover, .page-todo a:hover { text-decoration: underline; }
 .schedule-menu .popover-item { justify-content: space-between; text-decoration: none; }
 .subtask-history { margin-top: 8px; }
 .subtask-history summary { cursor: pointer; color: var(--muted); font-size: 13px; padding: 4px 0; user-select: none; }
@@ -730,6 +735,7 @@ table.list tr.stale td:first-child { box-shadow: inset 3px 0 0 var(--handle); }
   .project-panel .doc-title { font-size: 22px; }
   .page-chips { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; }
   .page-chips::-webkit-scrollbar { display: none; }
+  .page-chips-label { flex: none; align-self: center; color: var(--muted); font-size: 12px; font-weight: 600; }
   .page-chips a, .page-chips button {
     flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; font-size: 14px; white-space: nowrap;
     color: var(--text); background: none; border: 1px solid var(--border); border-radius: 8px;

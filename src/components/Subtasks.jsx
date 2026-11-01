@@ -2,9 +2,10 @@ import { useRef, useState } from 'react';
 import { usePhone } from '../usePhone.js';
 import Popover from './Popover.jsx';
 import { downloadIcs, formatSlot, icsFilename, icsText, outlookUrl, subtaskEvent } from './calendar.js';
+import { docsOf } from './pages.js';
 import { PeopleInput, Tag, fitToContent, formatDateTime, timeAgo, toPeople } from './props.jsx';
 
-export default function Subtasks({ items, projectTitle, onChange }) {
+export default function Subtasks({ items, pages, base, projectTitle, onChange, onAddDoc, onOpenDoc }) {
   const [dragIndex, setDragIndex] = useState(null);
   const phone = usePhone();
 
@@ -89,8 +90,12 @@ export default function Subtasks({ items, projectTitle, onChange }) {
                   onChange={(owners) => update(i, { owners: owners.length ? owners : undefined })}
                 />
               </div>
+              <TodoDocs docs={docsOf(s, pages)} base={base} onOpen={onOpenDoc} />
               <div className="subtask-actions">
                 <ScheduleBlock text={s.text} owners={s.owners} projectTitle={projectTitle} />
+                <button className="add-doc" onClick={() => onAddDoc(i)} title="Write a doc for this to-do">
+                  📝 Add doc
+                </button>
                 {/* Drag handles need a mouse, so a phone gets buttons. */}
                 {phone && open.length > 1 && (
                   <>
@@ -145,6 +150,7 @@ export default function Subtasks({ items, projectTitle, onChange }) {
                       </span>
                     )}
                   </div>
+                  <TodoDocs docs={docsOf(s, pages)} base={base} onOpen={onOpenDoc} />
                 </div>
                 <button className="icon" onClick={() => remove(i)} title="Delete subtask">
                   ×
@@ -155,6 +161,19 @@ export default function Subtasks({ items, projectTitle, onChange }) {
         </details>
       )}
     </section>
+  );
+}
+
+function TodoDocs({ docs, base, onOpen }) {
+  if (docs.length === 0) return null;
+  return (
+    <div className="subtask-docs">
+      {docs.map((p) => (
+        <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} onClick={onOpen}>
+          📝 {p.title}
+        </a>
+      ))}
+    </div>
   );
 }
 

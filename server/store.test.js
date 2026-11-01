@@ -60,6 +60,65 @@ test('project lifecycle: create, patch properties, subtasks, pages, trash', asyn
   assert.equal((await fs.readdir(store.trashDir)).length, 2);
 });
 
+test('a to-do keeps its linked docs through edits, reordering and being checked off', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Linked docs' });
+  const page = await store.createPage(p.id, { title: 'Design' });
+  await store.updateProject(p.id, { subtasks: [{ text: 'a', done: false }, { text: 'b', done: false, docs: [page.id, page.id] }] });
+
+  const reordered = [{ text: 'b reworded', done: true, docs: [page.id] }, { text: 'a', done: false }];
+  const got = await store.updateProject(p.id, { subtasks: reordered });
+  assert.deepEqual(got.subtasks, reordered);
+  assert.equal(got.pages.length, 1);
+
+  const file = await fs.readFile(path.join(store.projectsDir, p.id, 'index.md'), 'utf8');
+  assert.match(file, /docs:\n\s+- design\n/);
+});
+
+test('deleting a to-do doc clears the link, and leaves the rest alone', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Linked docs' });
+  const one = await store.createPage(p.id, { title: 'One' });
+  const two = await store.createPage(p.id, { title: 'Two' });
+  await store.updateProject(p.id, { subtasks: [{ text: 'a', done: false, docs: [one.id, two.id] }, { text: 'b', done: false, docs: [one.id] }] });
+
+  await store.deletePage(p.id, one.id);
+  assert.deepEqual((await store.getProject(p.id)).subtasks, [{ text: 'a', done: false, docs: [two.id] }, { text: 'b', done: false }]);
+
+  // A later page that lands on the same id starts out as a wiki page.
+  const again = await store.createPage(p.id, { title: 'One' });
+  assert.equal(again.id, one.id);
+  assert.deepEqual((await store.getProject(p.id)).subtasks[1], { text: 'b', done: false });
+});
+
+test('deleting a page with no to-do does not touch the project', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Wiki page' });
+  const page = await store.createPage(p.id, { title: 'Runbook' });
+  const before = await fs.readFile(store.projectFile(p.id), 'utf8');
+  await store.deletePage(p.id, page.id);
+  assert.equal(await fs.readFile(store.projectFile(p.id), 'utf8'), before);
+});
+
+test('removing a to-do keeps its doc, which becomes an unlinked page', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Linked docs' });
+  const page = await store.createPage(p.id, { title: 'Design' });
+  await store.updateProject(p.id, { subtasks: [{ text: 'a', done: false, docs: [page.id] }] });
+  const got = await store.updateProject(p.id, { subtasks: [] });
+  assert.deepEqual(got.pages.map((x) => x.id), [page.id]);
+});
+
+test('links to pages removed outside the app are ignored, and bad ids are dropped', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Hand edited' });
+  const keep = await store.createPage(p.id, { title: 'Keep' });
+  const gone = await store.createPage(p.id, { title: 'Gone' });
+  await store.updateProject(p.id, { subtasks: [{ text: 'a', done: false, docs: [keep.id, gone.id, '../secrets', 7] }] });
+  await fs.rm(store.pageFile(p.id, gone.id));
+  assert.deepEqual((await store.getProject(p.id)).subtasks, [{ text: 'a', done: false, docs: [keep.id] }]);
+});
+
 test('body saves detect conflicts, but metadata edits do not cause them', async () => {
   const store = await freshStore();
   const p = await store.createProject({ title: 'Conflicts' });
