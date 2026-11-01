@@ -386,7 +386,8 @@ ul.people-menu .people-menu-label, ul.people-menu .people-menu-label:hover { bac
 .schedule { position: relative; display: inline-block; }
 .schedule-btn, .add-doc { border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; background: transparent; color: var(--muted); font-size: 13px; }
 .schedule-btn:hover, .add-doc:hover { background: var(--hover); color: var(--text); }
-.subtask-doc { align-self: flex-start; padding: 2px 6px; font-size: 13px; }
+.subtask-doc { padding: 2px 6px; font-size: 13px; }
+.subtask-main > .subtask-doc { align-self: flex-start; }
 .subtask-doc, .page-todo a { color: var(--accent); }
 .subtask-doc:hover, .page-todo a:hover { text-decoration: underline; }
 .schedule-menu .popover-item { justify-content: space-between; text-decoration: none; }
@@ -766,7 +767,10 @@ table.list tr.stale td:first-child { box-shadow: inset 3px 0 0 var(--handle); }
   .subtask-main { gap: 0; }
   .subtask-text { padding: 11px 4px 4px; }
   .subtask-actions { align-items: center; margin-top: -4px; }
-  .schedule-btn { min-height: 44px; }
+  .schedule-btn, .add-doc, .subtask-doc { min-height: 44px; }
+  .subtask-doc { display: inline-flex; align-items: center; }
+  /* The arrows wrap as a pair on a narrow screen, rather than leaving one behind. */
+  .subtask-move { display: flex; margin-left: auto; }
   .subtask-new { min-height: 48px; padding-left: 8px; }
   .subtask-history summary { display: flex; align-items: center; min-height: 44px; font-size: 14px; }
 
