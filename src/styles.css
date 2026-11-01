@@ -386,9 +386,9 @@ ul.people-menu .people-menu-label, ul.people-menu .people-menu-label:hover { bac
 .schedule { position: relative; display: inline-block; }
 .schedule-btn, .add-doc { border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; background: transparent; color: var(--muted); font-size: 13px; }
 .schedule-btn:hover, .add-doc:hover { background: var(--hover); color: var(--text); }
-.subtask-docs { display: flex; flex-wrap: wrap; gap: 2px 10px; padding: 2px 4px; font-size: 13px; overflow-wrap: anywhere; }
-.subtask-docs a, .page-todo a { color: var(--accent); }
-.subtask-docs a:hover, .page-todo a:hover { text-decoration: underline; }
+.subtask-doc { align-self: flex-start; padding: 2px 4px; font-size: 13px; overflow-wrap: anywhere; }
+.subtask-doc, .page-todo a { color: var(--accent); }
+.subtask-doc:hover, .page-todo a:hover { text-decoration: underline; }
 .schedule-menu .popover-item { justify-content: space-between; text-decoration: none; }
 .subtask-history { margin-top: 8px; }
 .subtask-history summary { cursor: pointer; color: var(--muted); font-size: 13px; padding: 4px 0; user-select: none; }

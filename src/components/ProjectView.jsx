@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, LIVE_STATUS } from '../api.js';
 import { navigate } from '../App.jsx';
 import { usePhone } from '../usePhone.js';
@@ -14,6 +14,7 @@ export default function ProjectView({ id, pageId, workspace }) {
   const [project, setProject] = useState(null);
   const [error, setError] = useState(null);
   const [saveError, setSaveError] = useState(null);
+  const addingDoc = useRef(false);
   const phone = usePhone();
 
   const load = useCallback(
@@ -57,17 +58,19 @@ export default function ProjectView({ id, pageId, workspace }) {
     navigate(`#/p/${encodeURIComponent(id)}/${encodeURIComponent(page.id)}`);
   }
 
-  // A to-do doc is an ordinary page with its id on the to-do. If the second step fails, the page
-  // is still there, in the wiki.
+  // A to-do doc is an ordinary page named after the to-do, with its id on the to-do. If the second
+  // step fails, the page is still there, in the wiki. The guard stops a double click making two.
   async function addTodoDoc(index) {
-    const title = window.prompt('Doc title', project.subtasks[index].text);
-    if (!title?.trim()) return;
+    if (addingDoc.current) return;
+    addingDoc.current = true;
     try {
-      const page = await api.createPage(id, { title });
-      await patch({ subtasks: project.subtasks.map((s, i) => (i === index ? { ...s, docs: [...(s.docs ?? []), page.id] } : s)) });
+      const page = await api.createPage(id, { title: project.subtasks[index].text });
+      await patch({ subtasks: project.subtasks.map((s, i) => (i === index ? { ...s, doc: page.id } : s)) });
       navigate(`#/p/${encodeURIComponent(id)}/${encodeURIComponent(page.id)}`);
     } catch (e) {
       setSaveError(`The doc was not created: ${e.message}`);
+    } finally {
+      addingDoc.current = false;
     }
   }
 

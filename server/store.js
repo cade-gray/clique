@@ -621,11 +621,8 @@ export class Store {
     await withLock(projectFile, async () => {
       const doc = await this.readDoc(projectFile);
       const subtasks = normalizeSubtasks(doc.data.subtasks);
-      if (!subtasks.some((s) => s.docs?.includes(page))) return;
-      const unlinked = subtasks.map(({ docs, ...s }) => {
-        const left = (docs ?? []).filter((d) => d !== page);
-        return left.length ? { ...s, docs: left } : s;
-      });
+      if (!subtasks.some((s) => s.doc === page)) return;
+      const unlinked = withoutMissingDocs(subtasks, await this.listPages(id));
       await writeFileAtomic(projectFile, stringifyMarkdown({ ...doc.data, subtasks: unlinked, updated: now() }, doc.body));
     });
   }
@@ -643,20 +640,16 @@ function normalizeSubtasks(list) {
       if (doneAt && !Number.isNaN(doneAt.getTime())) out.doneAt = doneAt.toISOString();
       const owners = normalizePeople(s.owners);
       if (owners.length) out.owners = owners;
-      // Ids of the project's pages written for this to-do. The link lives on the to-do, so it
+      // The id of the project's page written for this to-do. The link lives on the to-do, so it
       // follows the to-do through rewording and reordering, and a page with no to-do is a wiki page.
-      const docs = Array.isArray(s.docs) ? [...new Set(s.docs.filter((d) => typeof d === 'string' && ID_RE.test(d)))] : [];
-      if (docs.length) out.docs = docs;
+      if (typeof s.doc === 'string' && ID_RE.test(s.doc)) out.doc = s.doc;
       return out;
     });
 }
 
 // A linked page can go missing if its file is deleted by hand outside the app.
 function withoutMissingDocs(subtasks, pages) {
-  return subtasks.map(({ docs, ...s }) => {
-    const left = (docs ?? []).filter((d) => pages.some((p) => p.id === d));
-    return left.length ? { ...s, docs: left } : s;
-  });
+  return subtasks.map(({ doc, ...s }) => (pages.some((p) => p.id === doc) ? { ...s, doc } : s));
 }
 
 // Hand-edited groups that can't be used (bad id, duplicate) are skipped rather than failing every request.
