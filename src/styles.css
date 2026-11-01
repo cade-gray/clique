@@ -376,9 +376,18 @@ ul.people-menu .people-menu-label, ul.people-menu .people-menu-label:hover { bac
 .subtasks > ul > li, .subtask-history > ul > li { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }
 .subtasks li { display: flex; align-items: flex-start; gap: 8px; }
 .subtasks li:hover { background: var(--hover); }
-.subtasks li.dragging { opacity: 0.4; }
-.subtasks li > input[type='checkbox'], .subtasks li > .icon, .subtasks .handle { margin-top: 5px; }
-.subtasks .handle { cursor: grab; color: var(--handle); font-size: 12px; padding: 0 2px; visibility: hidden; user-select: none; }
+/* Fades in, so the browser's drag image is taken from the card before it dims. */
+.subtasks li.dragging { opacity: 0.4; transition: opacity 0.15s; }
+/* Drawn in the gap between cards rather than added to the list, so nothing moves under the pointer.
+   Above the card being dragged, which on a phone is usually covering the gap. */
+.subtasks > ul > li { position: relative; }
+.subtasks li.drop-before::before, .subtasks li.drop-after::after { content: ''; position: absolute; z-index: 6; left: 0; right: 0; height: 3px; background: var(--accent); border-radius: 2px; pointer-events: none; }
+.subtasks li.drop-before::before { top: -7px; }
+.subtasks li.drop-after::after { bottom: -7px; }
+.subtasks li > input[type='checkbox'], .subtasks li > .icon { margin-top: 5px; }
+/* The full height of the card, so it is a bigger target than the dots. */
+.subtasks .handle { align-self: stretch; padding: 5px 4px 0; cursor: grab; color: var(--handle); font-size: 12px; visibility: hidden; user-select: none; }
+.subtasks .handle:active { cursor: grabbing; }
 .subtasks li:hover .handle { visibility: visible; }
 .subtask-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .subtask-meta, .subtask-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-left: 4px; }
@@ -612,7 +621,14 @@ table.list tr.stale td:first-child { box-shadow: inset 3px 0 0 var(--handle); }
   input:not([type='checkbox']), select, textarea { font-size: 16px; }
   /* Nothing can hover on a touch screen, so what appears on hover is simply there. */
   .update-meta .icon { visibility: visible; }
-  .subtasks .handle { display: none; }
+  /* Always shown, since nothing hovers here, and out to the card's edges so a thumb can find it.
+     Only the handle stops the page scrolling. */
+  .subtasks .handle {
+    display: flex; flex: none; align-items: center; justify-content: center; width: 36px; margin: -8px -8px -8px -10px; padding: 0;
+    color: var(--muted); font-size: 16px; visibility: visible; touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none;
+  }
+  /* The card is under a finger rather than left behind, so it lifts instead of fading. */
+  .subtasks > ul > li.dragging { z-index: 5; opacity: 1; background: var(--panel); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); transition: none; }
 
   /* A real 44px target around the box, which stays its usual size. */
   .subtasks input[type='checkbox'], .prop-row input[type='checkbox'] {
@@ -778,8 +794,6 @@ table.list tr.stale td:first-child { box-shadow: inset 3px 0 0 var(--handle); }
   .subtask-actions { align-items: center; margin-top: -4px; }
   .schedule-btn, .add-doc, .subtask-doc { min-height: 44px; }
   .subtask-doc { display: inline-flex; align-items: center; }
-  /* The arrows wrap as a pair on a narrow screen, rather than leaving one behind. */
-  .subtask-move { display: flex; margin-left: auto; }
   .subtask-new { min-height: 48px; padding-left: 8px; }
   .subtask-history summary { display: flex; align-items: center; min-height: 44px; font-size: 14px; }
   .workday-picker select { flex: 1; min-width: 0; min-height: 44px; }
