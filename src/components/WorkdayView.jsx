@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { navigate } from '../App.jsx';
 import { Tag, formatDateTime, timeAgo } from './props.jsx';
+import ScheduleButton from './ScheduleButton.jsx';
 import { todosFor, workdayPeople } from './workday.js';
 
 const POLL_MS = 30000;
@@ -119,6 +120,12 @@ function WorkdayTodo({ todo, workspace }) {
         {todo.potentialBlocker && <Tag color="orange">Potential blocker</Tag>}
       </div>
       {todo.potentialBlocker && project.blockedReason && <div className="workday-reason">Project blocked: {project.blockedReason}</div>}
+      {!todo.done && (
+        <div className="workday-actions">
+          {/* The event links to the to-do's project, which this person can act on, not to this list. */}
+          <ScheduleButton text={todo.text} owners={todo.owners} projectTitle={project.title} url={`${window.location.href.split('#')[0]}#/p/${encodeURIComponent(project.id)}`} />
+        </div>
+      )}
     </li>
   );
 }

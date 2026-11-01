@@ -136,11 +136,23 @@ export function icsFilename(text) {
   return `${slug || 'to-do'}.ics`;
 }
 
-export function downloadIcs(name, text) {
+function followIcsLink(text, attributes) {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  const a = Object.assign(document.createElement('a'), { href: url, ...attributes });
   document.body.append(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  return url;
+}
+
+export function downloadIcs(name, text) {
+  URL.revokeObjectURL(followIcsLink(text, { download: name }));
+}
+
+// A web page can't start a calendar app, but it can hand the browser a calendar event rather than
+// a file to save. A phone then offers to add it, and a computer saves it for the default calendar
+// app to open. The address outlives the click, because a phone reads it after asking.
+export function openIcs(text) {
+  const url = followIcsLink(text);
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
