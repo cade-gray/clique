@@ -15,7 +15,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import YAML from 'yaml';
 import { EventLog } from './events.js';
 
-export const RESERVED_KEYS = ['title', 'status', 'order', 'group', 'repo', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
+export const RESERVED_KEYS = ['title', 'status', 'order', 'group', 'repo', 'repos', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
 
 // The column for projects that are in production. Only projects here can be flagged as in maintenance.
 export const LIVE_STATUS = 'live';
@@ -361,7 +361,7 @@ export class Store {
       status,
       // A group that has since been deleted reads as no group.
       group: ws.groups.some((g) => g.id === data.group) ? data.group : null,
-      repo: normalizeRepo(data.repo),
+      repos: projectRepos(data),
       order: Number(data.order) || 0,
       properties: props,
       latestUpdate: updates.length ? updates[updates.length - 1] : null,
@@ -457,11 +457,14 @@ export class Store {
         else if (!ws.groups.some((g) => g.id === patch.group)) throw new HttpError(400, 'Unknown group');
         else data.group = patch.group;
       }
-      if (patch.repo !== undefined) {
-        const repo = normalizeRepo(patch.repo);
-        if (!patch.repo) delete data.repo;
-        else if (!repo) throw new HttpError(400, 'Enter a GitHub repository link, like https://github.com/owner/repo');
-        else data.repo = repo;
+      if (patch.repos !== undefined) {
+        const entered = (Array.isArray(patch.repos) ? patch.repos : [patch.repos]).filter((r) => String(r ?? '').trim());
+        const repos = entered.map(normalizeRepo);
+        if (repos.includes(null)) throw new HttpError(400, 'Enter a GitHub repository link, like https://github.com/owner/repo');
+        // A project saved before it could have several keeps its one repo in `repo` until now.
+        delete data.repo;
+        if (repos.length) data.repos = uniqueRepos(repos);
+        else delete data.repos;
       }
       if (patch.blocked !== undefined) {
         if (patch.blocked) data.blocked = true;
@@ -660,6 +663,17 @@ function normalizeSubtasks(list) {
 // A linked page can go missing if its file is deleted by hand outside the app.
 function withoutMissingDocs(subtasks, pages) {
   return subtasks.map(({ doc, ...s }) => (pages.some((p) => p.id === doc) ? { ...s, doc } : s));
+}
+
+// A project's repositories in one form, including the single `repo` of an older file.
+function projectRepos(data) {
+  const listed = Array.isArray(data.repos) ? data.repos : [];
+  return uniqueRepos([...listed, data.repo].map(normalizeRepo).filter(Boolean));
+}
+
+// GitHub ignores case in a repository's address, so these are the same repository.
+function uniqueRepos(repos) {
+  return repos.filter((repo, i) => repos.findIndex((r) => r.toLowerCase() === repo.toLowerCase()) === i);
 }
 
 // A repository in one form, however it was copied: a browser link (even from deeper in the repo)

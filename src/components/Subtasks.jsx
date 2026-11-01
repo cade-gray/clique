@@ -1,14 +1,14 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { usePhone } from '../usePhone.js';
 import Popover from './Popover.jsx';
-import { issueLink, issueNumber, newIssueUrl } from './github.js';
+import { isIssueNumber, issueLabel, issueLink, newIssueUrl, repoPath } from './github.js';
 import { docOf } from './pages.js';
 import { PeopleInput, Tag, fitToContent, formatDateTime, timeAgo, toPeople } from './props.jsx';
 import ScheduleButton from './ScheduleButton.jsx';
 import { moveToSlot, movesNowhere, slotAt } from './todos.js';
 import { useTouchDrag } from './useTouchDrag.js';
 
-export default function Subtasks({ items, pages, base, repo, projectTitle, onChange, onAddDoc, onOpenDoc }) {
+export default function Subtasks({ items, pages, base, repos, projectTitle, onChange, onAddDoc, onOpenDoc }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [slot, setSlot] = useState(null);
   const listRef = useRef(null);
@@ -139,13 +139,13 @@ export default function Subtasks({ items, pages, base, repo, projectTitle, onCha
                 )}
                 {s.issue ? (
                   <span className="subtask-issue">
-                    <IssueLink url={s.issue} />
-                    <button className="icon" onClick={() => update(i, { issue: undefined })} aria-label={`Unlink issue #${issueNumber(s.issue)}`} title="Unlink this issue">
+                    <IssueLink url={s.issue} repos={repos} />
+                    <button className="icon" onClick={() => update(i, { issue: undefined })} aria-label={`Unlink issue ${issueLabel(s.issue, repos)}`} title="Unlink this issue">
                       ×
                     </button>
                   </span>
                 ) : (
-                  repo && <IssueBlock repo={repo} text={s.text} owners={s.owners} projectTitle={projectTitle} onLink={(issue) => update(i, { issue })} />
+                  repos.length > 0 && <IssueBlock repos={repos} text={s.text} owners={s.owners} projectTitle={projectTitle} onLink={(issue) => update(i, { issue })} />
                 )}
               </div>
             </div>
@@ -181,7 +181,7 @@ export default function Subtasks({ items, pages, base, repo, projectTitle, onCha
                     )}
                   </div>
                   <TodoDoc page={docOf(s, pages)} base={base} onOpen={onOpenDoc} />
-                  {s.issue && <IssueLink url={s.issue} />}
+                  {s.issue && <IssueLink url={s.issue} repos={repos} />}
                 </div>
                 <button className="icon" onClick={() => remove(i)} title="Delete subtask">
                   ×
@@ -247,15 +247,15 @@ function TodoDoc({ page, base, onOpen }) {
   );
 }
 
-function IssueLink({ url }) {
+function IssueLink({ url, repos }) {
   return (
     <a className="subtask-issue-link" href={url} target="_blank" rel="noreferrer" title="Open on GitHub">
-      🔗 #{issueNumber(url)}
+      🔗 {issueLabel(url, repos)}
     </a>
   );
 }
 
-function IssueBlock({ repo, text, owners, projectTitle, onLink }) {
+function IssueBlock({ repos, text, owners, projectTitle, onLink }) {
   const [open, setOpen] = useState(false);
   const anchor = useRef(null);
   return (
@@ -266,8 +266,8 @@ function IssueBlock({ repo, text, owners, projectTitle, onLink }) {
       {open && (
         <IssueMenu
           anchor={anchor}
-          repo={repo}
-          newIssue={newIssueUrl(repo, { text, owners: toPeople(owners), projectTitle, url: window.location.href })}
+          repos={repos}
+          newIssue={(repo) => newIssueUrl(repo, { text, owners: toPeople(owners), projectTitle, url: window.location.href })}
           onLink={onLink}
           onClose={() => setOpen(false)}
         />
@@ -277,13 +277,14 @@ function IssueBlock({ repo, text, owners, projectTitle, onLink }) {
 }
 
 // Stays open when the form opens in its own tab, ready for the new issue's link on the way back.
-function IssueMenu({ anchor, repo, newIssue, onLink, onClose }) {
+function IssueMenu({ anchor, repos, newIssue, onLink, onClose }) {
   const [value, setValue] = useState('');
+  const [chosen, setChosen] = useState(repos[0]);
   const [invalid, setInvalid] = useState(false);
 
   function submit(e) {
     e.preventDefault();
-    const url = issueLink(value, repo);
+    const url = issueLink(value, repos, chosen);
     if (!url) return setInvalid(true);
     onLink(url);
     onClose();
@@ -292,9 +293,11 @@ function IssueMenu({ anchor, repo, newIssue, onLink, onClose }) {
   return (
     <Popover title="GitHub issue" anchor={anchor} onClose={onClose} className="schedule-menu issue-menu">
       <div className="popover-label">GitHub issue</div>
-      <a className="popover-item" href={newIssue} target="_blank" rel="noreferrer">
-        Create on GitHub <span className="muted">↗</span>
-      </a>
+      {repos.map((repo) => (
+        <a key={repo} className="popover-item" href={newIssue(repo)} target="_blank" rel="noreferrer">
+          {repos.length > 1 ? `Create in ${repoPath(repo)}` : 'Create on GitHub'} <span className="muted">↗</span>
+        </a>
+      ))}
       <form className="issue-form" onSubmit={submit}>
         <input
           value={value}
@@ -309,8 +312,17 @@ function IssueMenu({ anchor, repo, newIssue, onLink, onClose }) {
         <button type="submit" className="toolbar-btn" disabled={!value.trim()}>
           Link
         </button>
+        {repos.length > 1 && isIssueNumber(value) && (
+          <select value={chosen} aria-label="Repo for this issue number" onChange={(e) => setChosen(e.target.value)}>
+            {repos.map((repo) => (
+              <option key={repo} value={repo}>
+                {repoPath(repo)}
+              </option>
+            ))}
+          </select>
+        )}
       </form>
-      <span className="popover-hint popover-note">{invalid ? 'That isn’t an issue in this project’s repo.' : 'After creating it, paste its link here.'}</span>
+      <span className="popover-hint popover-note">{invalid ? `That isn’t an issue in this project’s ${repos.length > 1 ? 'repos' : 'repo'}.` : 'After creating it, paste its link here.'}</span>
     </Popover>
   );
 }
