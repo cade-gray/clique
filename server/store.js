@@ -393,13 +393,14 @@ export class Store {
 
   async getProject(id) {
     const doc = await this.readDoc(this.projectFile(id));
+    const pages = await this.listPages(id);
     return {
       ...this.toSummary(id, doc.data, await this.getWorkspace()),
-      subtasks: normalizeSubtasks(doc.data.subtasks),
+      subtasks: withoutMissingDocs(normalizeSubtasks(doc.data.subtasks), pages),
       updates: normalizeUpdates(doc.data.updates),
       body: doc.body,
       version: doc.version,
-      pages: await this.listPages(id),
+      pages,
     };
   }
 
@@ -615,6 +616,18 @@ export class Store {
     const file = this.pageFile(id, page);
     if (!(await exists(file))) throw new HttpError(404, 'Not found');
     await this.moveToTrash(file, `${id}--${page}.md`);
+    // Clear the link too, so a new page that reuses this id doesn't inherit the to-do.
+    const projectFile = this.projectFile(id);
+    await withLock(projectFile, async () => {
+      const doc = await this.readDoc(projectFile);
+      const subtasks = normalizeSubtasks(doc.data.subtasks);
+      if (!subtasks.some((s) => s.docs?.includes(page))) return;
+      const unlinked = subtasks.map(({ docs, ...s }) => {
+        const left = (docs ?? []).filter((d) => d !== page);
+        return left.length ? { ...s, docs: left } : s;
+      });
+      await writeFileAtomic(projectFile, stringifyMarkdown({ ...doc.data, subtasks: unlinked, updated: now() }, doc.body));
+    });
   }
 }
 
@@ -630,8 +643,20 @@ function normalizeSubtasks(list) {
       if (doneAt && !Number.isNaN(doneAt.getTime())) out.doneAt = doneAt.toISOString();
       const owners = normalizePeople(s.owners);
       if (owners.length) out.owners = owners;
+      // Ids of the project's pages written for this to-do. The link lives on the to-do, so it
+      // follows the to-do through rewording and reordering, and a page with no to-do is a wiki page.
+      const docs = Array.isArray(s.docs) ? [...new Set(s.docs.filter((d) => typeof d === 'string' && ID_RE.test(d)))] : [];
+      if (docs.length) out.docs = docs;
       return out;
     });
+}
+
+// A linked page can go missing if its file is deleted by hand outside the app.
+function withoutMissingDocs(subtasks, pages) {
+  return subtasks.map(({ docs, ...s }) => {
+    const left = (docs ?? []).filter((d) => pages.some((p) => p.id === d));
+    return left.length ? { ...s, docs: left } : s;
+  });
 }
 
 // Hand-edited groups that can't be used (bad id, duplicate) are skipped rather than failing every request.
