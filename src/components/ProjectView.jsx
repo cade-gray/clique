@@ -3,6 +3,7 @@ import { api, LIVE_STATUS } from '../api.js';
 import { navigate } from '../App.jsx';
 import { usePhone } from '../usePhone.js';
 import DocBody from './DocBody.jsx';
+import { repoPath } from './github.js';
 import { splitPages, todoOf } from './pages.js';
 import { StagePicker } from './PhoneBoard.jsx';
 import Sheet from './Sheet.jsx';
@@ -161,7 +162,7 @@ export default function ProjectView({ id, pageId, workspace }) {
                 items={project.subtasks}
                 pages={project.pages}
                 base={base}
-                repo={project.repo}
+                repos={project.repos}
                 projectTitle={project.title}
                 onChange={(subtasks) => patch({ subtasks })}
                 onAddDoc={addTodoDoc}
@@ -218,8 +219,8 @@ function ProjectProps({ project, workspace, patch }) {
         </div>
       )}
       <div className="prop-row prop-row-url">
-        <label>GitHub repo</label>
-        <PropertyInput def={{ type: 'url' }} value={project.repo} onChange={(repo) => patch({ repo })} />
+        <label>GitHub repos</label>
+        <RepoList repos={project.repos} onChange={(repos) => patch({ repos })} />
       </div>
       <div className="prop-row">
         <label>Blocked</label>
@@ -261,6 +262,39 @@ function ProjectProps({ project, workspace, patch }) {
 // A project on a phone. The first screen answers "how is this going?", and everything else is one
 // tab away instead of being stacked below it. A Live project opens on its docs, because by then
 // the page is the solution's wiki.
+// The server puts each repo in its one form, and refuses anything that isn't a repository.
+function RepoList({ repos, onChange }) {
+  function add(e) {
+    const v = e.target.value.trim();
+    if (!v) return;
+    e.target.value = '';
+    onChange([...repos, v]);
+  }
+
+  return (
+    <div className="repo-list">
+      {repos.map((repo) => (
+        <span key={repo} className="repo-item">
+          <a href={repo} target="_blank" rel="noreferrer" title="Open on GitHub">
+            {repoPath(repo)}
+          </a>
+          <button className="icon" onClick={() => onChange(repos.filter((r) => r !== repo))} aria-label={`Remove ${repoPath(repo)}`} title="Remove this repo">
+            ×
+          </button>
+        </span>
+      ))}
+      <input
+        placeholder="+ Add a repo"
+        aria-label="Add a GitHub repo"
+        onBlur={add}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur();
+        }}
+      />
+    </div>
+  );
+}
+
 function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta, onPagesChanged, onAddPage, onAddTodoDoc, onDelete }) {
   const id = project.id;
   const [tab, setTab] = useState(pageId || project.status === LIVE_STATUS ? 'docs' : 'todos');
@@ -326,7 +360,7 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
             items={project.subtasks}
             pages={project.pages}
             base={base}
-            repo={project.repo}
+            repos={project.repos}
             projectTitle={project.title}
             onChange={(subtasks) => patch({ subtasks })}
             onAddDoc={onAddTodoDoc}

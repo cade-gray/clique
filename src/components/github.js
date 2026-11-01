@@ -9,17 +9,36 @@ export function newIssueUrl(repo, { text, owners = [], projectTitle, url }) {
   return `${repo}/issues/new?title=${encodeURIComponent(text)}&body=${encodeURIComponent(lines.join('\n'))}`;
 }
 
-// The issue's address from what was pasted or typed: a number, or a link to an issue in this
-// repository. Null for anything else, including a pull request or an issue in another repository.
-export function issueLink(input, repo) {
+// owner/name, the way GitHub writes a repository.
+export function repoPath(repo) {
+  return repo.replace(/^https?:\/\/[^/]+\//, '');
+}
+
+// A bare number says nothing about which repository it's in, so it needs one chosen.
+export function isIssueNumber(input) {
+  return /^#?[1-9]\d*$/.test(String(input ?? '').trim());
+}
+
+// The issue's address from what was pasted or typed: a number in the chosen repository, or a link
+// to an issue in any of them. Null for anything else, including a pull request or an issue in a
+// repository that isn't one of these.
+export function issueLink(input, repos, chosen = repos[0]) {
   const text = String(input ?? '').trim();
-  const number = /^#?([1-9]\d*)$/.exec(text);
-  if (number) return `${repo}/issues/${number[1]}`;
+  if (isIssueNumber(text)) return `${chosen}/issues/${text.replace('#', '')}`;
   const link = /^(?:https?:\/\/)?(.+?)\/issues\/([1-9]\d*)(?:[/?#].*)?$/i.exec(text);
-  if (!link || `https://${link[1]}`.toLowerCase() !== repo.toLowerCase()) return null;
-  return `${repo}/issues/${link[2]}`;
+  const repo = link && repos.find((r) => r.toLowerCase() === `https://${link[1]}`.toLowerCase());
+  return repo ? `${repo}/issues/${link[2]}` : null;
 }
 
 export function issueNumber(url) {
   return /\/issues\/(\d+)$/.exec(url)?.[1] ?? '';
+}
+
+// #12 when the project's one repository is the only place it could be, and name#12 otherwise. That
+// includes an issue left linked after its repository was removed from the project.
+export function issueLabel(url, repos) {
+  const number = `#${issueNumber(url)}`;
+  if (repos.length === 1 && url.toLowerCase().startsWith(`${repos[0].toLowerCase()}/`)) return number;
+  const name = /\/([^/]+)\/issues\/\d+$/.exec(url)?.[1];
+  return name ? `${name}${number}` : number;
 }

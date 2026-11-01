@@ -152,22 +152,46 @@ test('normalizeRepo accepts the ways a repository gets copied, and nothing else'
     assert.equal(normalizeRepo(input), null, String(input));
 });
 
-test('a project\'s repo is saved in one form, can be cleared, and rejects anything else', async () => {
+test('a project\'s repos are saved in one form, can be cleared, and reject anything else', async () => {
   const store = await freshStore();
   const p = await store.createProject({ title: 'Repo' });
-  assert.equal(p.repo, null);
+  assert.deepEqual(p.repos, []);
 
-  const saved = await store.updateProject(p.id, { repo: 'git@github.com:cade-gray/clique.git' });
-  assert.equal(saved.repo, 'https://github.com/cade-gray/clique');
+  const clique = 'https://github.com/cade-gray/clique';
+  const site = 'https://github.com/cade-gray/site';
+  const saved = await store.updateProject(p.id, { repos: ['git@github.com:cade-gray/clique.git', 'github.com/CADE-gray/CLIQUE', ' ', `${site}/tree/main`] });
+  assert.deepEqual(saved.repos, [clique, site]);
   assert.deepEqual(saved.properties, {});
-  assert.match(await fs.readFile(store.projectFile(p.id), 'utf8'), /^repo: https:\/\/github\.com\/cade-gray\/clique$/m);
+  assert.match(await fs.readFile(store.projectFile(p.id), 'utf8'), /^repos:\n {2}- https:\/\/github\.com\/cade-gray\/clique\n {2}- https:\/\/github\.com\/cade-gray\/site$/m);
 
-  await assert.rejects(store.updateProject(p.id, { repo: 'not a repo' }), (e) => e.status === 400);
-  assert.equal((await store.getProject(p.id)).repo, saved.repo);
+  await assert.rejects(store.updateProject(p.id, { repos: [clique, 'not a repo'] }), (e) => e.status === 400);
+  assert.deepEqual((await store.getProject(p.id)).repos, saved.repos);
 
-  assert.equal((await store.updateProject(p.id, { repo: null })).repo, null);
-  assert.doesNotMatch(await fs.readFile(store.projectFile(p.id), 'utf8'), /^repo:/m);
-  assert.equal((await store.listProjects()).find((x) => x.id === p.id).repo, null);
+  assert.deepEqual((await store.updateProject(p.id, { repos: [] })).repos, []);
+  assert.doesNotMatch(await fs.readFile(store.projectFile(p.id), 'utf8'), /^repos:/m);
+  assert.deepEqual((await store.listProjects()).find((x) => x.id === p.id).repos, []);
+});
+
+test('a project file with the older single repo reads as a list, and is rewritten when its repos change', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Older' });
+  const file = store.projectFile(p.id);
+  const clique = 'https://github.com/cade-gray/clique';
+  const site = 'https://github.com/cade-gray/site';
+  await fs.writeFile(file, (await fs.readFile(file, 'utf8')).replace(/^title:/m, `repo: ${clique}\ntitle:`));
+
+  assert.deepEqual((await store.getProject(p.id)).repos, [clique]);
+  assert.deepEqual((await store.updateProject(p.id, { title: 'Renamed' })).repos, [clique]);
+  assert.match(await fs.readFile(file, 'utf8'), /^repo: /m);
+
+  assert.deepEqual((await store.updateProject(p.id, { repos: [clique, site] })).repos, [clique, site]);
+  assert.doesNotMatch(await fs.readFile(file, 'utf8'), /^repo: /m);
+});
+
+test('repos cannot be used as a custom property key', async () => {
+  const store = await freshStore();
+  const ws = await store.getWorkspace();
+  await assert.rejects(store.saveWorkspace({ ...ws, properties: [{ key: 'repos', name: 'Repos', type: 'text' }] }), (e) => e.status === 400);
 });
 
 test('repo is a built-in key, so a property can\'t take it', async () => {
@@ -181,7 +205,7 @@ test('a hand-edited repo that isn\'t one reads as no repo', async () => {
   const p = await store.createProject({ title: 'Hand edited' });
   const file = store.projectFile(p.id);
   await fs.writeFile(file, (await fs.readFile(file, 'utf8')).replace('title:', 'repo: javascript:alert(1)\ntitle:'));
-  assert.equal((await store.getProject(p.id)).repo, null);
+  assert.deepEqual((await store.getProject(p.id)).repos, []);
 });
 
 test('a to-do keeps a linked issue through edits, and drops anything that isn\'t one', async () => {
