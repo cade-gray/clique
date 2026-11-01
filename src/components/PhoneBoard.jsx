@@ -135,6 +135,7 @@ function PhoneCard({ project, workspace, onMove }) {
         {project.maintenance && (
           <div className="card-maintenance">
             <strong>🔧 In maintenance</strong>
+            {project.maintenanceReason && <span>: {project.maintenanceReason}</span>}
           </div>
         )}
         <CardMeta project={project} workspace={workspace} />

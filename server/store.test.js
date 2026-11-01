@@ -371,20 +371,50 @@ test('attachments are saved under the project with unique names and stay out of 
   assert.throws(() => store.attachmentFile(p.id, 'notes.md'), (e) => e.status === 400);
 });
 
-test('maintenance only shows for live projects and can combine with blocked', async () => {
+test('a live project with open to-dos is in maintenance, and says which ones', async () => {
   const store = await freshStore();
   const p = await store.createProject({ title: 'Payments', status: 'live' });
-  assert.equal(p.maintenance, false);
-  let got = await store.updateProject(p.id, { maintenance: true, blocked: true });
-  assert.deepEqual([got.maintenance, got.blocked], [true, true]);
-  // Leaving Live hides the flag; coming back shows it again.
-  got = await store.updateProject(p.id, { status: 'graveyard' });
-  assert.equal(got.maintenance, false);
+  assert.deepEqual([p.maintenance, p.maintenanceReason], [false, '']);
+
+  // One open to-do: the to-do itself is the reason.
+  let got = await store.updateProject(p.id, { subtasks: [{ text: 'Refund webhook retries' }], blocked: true });
+  assert.deepEqual([got.maintenance, got.maintenanceReason, got.blocked], [true, 'Refund webhook retries', true]);
+
+  // More than one, and the count is the reason instead.
+  got = await store.updateProject(p.id, { subtasks: [{ text: 'Refund webhook retries' }, { text: 'Rotate the API key' }] });
+  assert.deepEqual([got.maintenance, got.maintenanceReason], [true, '2 to-dos open']);
+
+  // A checked-off to-do doesn't count, so the last one takes the project back out.
+  got = await store.updateProject(p.id, { subtasks: [{ text: 'Refund webhook retries', done: true }, { text: 'Rotate the API key' }] });
+  assert.deepEqual([got.maintenance, got.maintenanceReason], [true, 'Rotate the API key']);
+  got = await store.updateProject(p.id, { subtasks: [{ text: 'Refund webhook retries', done: true }, { text: 'Rotate the API key', done: true }] });
+  assert.deepEqual([got.maintenance, got.maintenanceReason], [false, '']);
+
+  // Only Live counts: the same open to-do elsewhere is just work in progress.
+  got = await store.updateProject(p.id, { status: 'in-progress', subtasks: [{ text: 'Rotate the API key' }] });
+  assert.deepEqual([got.maintenance, got.maintenanceReason], [false, '']);
   got = await store.updateProject(p.id, { status: 'live' });
-  assert.equal(got.maintenance, true);
+  assert.deepEqual([got.maintenance, got.maintenanceReason], [true, 'Rotate the API key']);
+
+  // The flag is never stored, and can't be set by hand.
   got = await store.updateProject(p.id, { maintenance: false });
-  assert.equal(got.maintenance, false);
+  assert.equal(got.maintenance, true);
   assert.doesNotMatch(await fs.readFile(store.projectFile(p.id), 'utf8'), /maintenance/);
+});
+
+test('a maintenance flag left in an older file is ignored and dropped on the next save', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Payments', status: 'live' });
+  const file = store.projectFile(p.id);
+  await fs.writeFile(file, (await fs.readFile(file, 'utf8')).replace(/^status: live$/m, 'status: live\nmaintenance: true'));
+
+  const got = await store.getProject(p.id);
+  assert.equal(got.maintenance, false);
+  // And it isn't mistaken for one of the workspace's own properties.
+  assert.equal('maintenance' in got.properties, false);
+
+  await store.updateProject(p.id, { title: 'Payments' });
+  assert.doesNotMatch(await fs.readFile(file, 'utf8'), /maintenance/);
 });
 
 test('a workspace with a done column is migrated to live + graveyard on start', async () => {

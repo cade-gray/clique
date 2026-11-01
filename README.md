@@ -13,7 +13,7 @@ The board's columns are the stages of a solution's life (they can be renamed or 
 | **Backlog** | Requests and ideas: what's wanted, by whom, and why. |
 | **In progress** | The working space while it's built: to-dos with owners, design notes, field mappings, open questions, and a timeline of status updates. |
 | **In review** | Testing, sign-off and go-live preparation. |
-| **Live** | In production. The page becomes the solution's wiki: what it does, how it works, the systems it touches, runbooks and support notes. Tick **Maintenance** while it's being changed or fixed. |
+| **Live** | In production. The page becomes the solution's wiki: what it does, how it works, the systems it touches, runbooks and support notes. A to-do added here flags the project as **in maintenance** until it's checked off. |
 | **Graveyard** | Retired. Nothing is deleted, so the history and documentation are still there if someone asks how it used to work, or the solution comes back. |
 
 Each project is more than a ticket:
@@ -21,7 +21,7 @@ Each project is more than a ticket:
 - **Properties** shared by every project (owners, systems, go-live date, priority, or whatever your team needs) show on the card, so the board doubles as an inventory of what's been built.
 - **Pages**: an overview plus as many sub-pages as you like (design, field mapping, runbook, meeting notes), edited Notion-style with markdown that renders as you type, tables, and code blocks with a copy button.
 - **Status updates** keep a dated record of decisions and progress; the latest one shows on the card.
-- **To-dos** with owners and history, each able to book a working block in Google Calendar, Outlook or any calendar that reads `.ics`, plus **Blocked** and **Maintenance** flags that stand out on the board.
+- **To-dos** with owners and history, each able to book a working block in Google Calendar, Outlook or any calendar that reads `.ics`, plus a **Blocked** flag and an automatic **Maintenance** flag that stand out on the board.
 - **List view** for a sortable, printable, CSV-exportable view of everything, for management reports or audits.
 
 Everything is stored as plain markdown files on disk (Obsidian-style), so the documentation outlives the tool: it can be read, searched, backed up or put in git without Clique. There is no database and no login yet; everyone who can reach the site edits the same board.
@@ -84,7 +84,7 @@ columns:                  # left to right on the board; also the Status choices
     name: Backlog         # the label people see; safe to rename any time
   - id: in-progress
     name: In progress
-  - id: live              # projects in production; only these can be flagged as in maintenance
+  - id: live              # projects in production; only these can be in maintenance
     name: Live
   - id: graveyard
     name: Graveyard
@@ -122,14 +122,14 @@ groups:                   # teams; each project can belong to one
 
 - At least one column is required. The order in the file is the order on the board.
 - Every project always has a valid status. New projects start in `backlog` (or the first column if there is no `backlog`). If a column is removed, or a file names a status that doesn't exist, its projects appear in `backlog`; the file is only rewritten the next time the project is saved.
-- The `live` column id is special: only projects in it show the **Maintenance** checkbox. Rename its label freely, but keep the id.
+- The `live` column id is special: only projects in it go into **Maintenance** when they have an open to-do. Rename its label freely, but keep the id.
 - Upgrading from a version before 1.1: on start, a workspace with a `done` column (and no `live` one) has it replaced by **Live**, with **Graveyard** added after it, and every project in `done` is moved to `live`.
 
 **Properties**
 
 | Field | Rules |
 | --- | --- |
-| `key` | Same format as a column `id`, unique. It becomes a flat key in every project's frontmatter. It can't be one of the built-in keys: `title`, `status`, `order`, `group`, `repo`, `subtasks`, `blocked`, `blockedReason`, `maintenance`, `updates`, `created`, `updated`. |
+| `key` | Same format as a column `id`, unique. It becomes a flat key in every project's frontmatter. It can't be one of the built-in keys: `title`, `status`, `order`, `group`, `repo`, `repos`, `subtasks`, `blocked`, `blockedReason`, `maintenance`, `updates`, `created`, `updated`. |
 | `name` | The label shown in the UI and the CSV, up to 80 characters. |
 | `type` | One of the types below. |
 | `options` | For `select` and `multi_select`: a list of `{ value, color }`. Colors: `gray`, `brown`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `red`. |
@@ -178,7 +178,6 @@ repos:                       # optional; the GitHub repositories for this projec
 order: 0                     # position within the column
 blocked: true                # optional; shows a red outline on the card
 blockedReason: Waiting on design sign-off
-maintenance: true            # optional; yellow outline, only while the project is in the live column
 subtasks:                    # shown as "To-dos" in the app
   - text: Draft wireframes
     done: true
@@ -217,7 +216,7 @@ Property, status and to-do changes save immediately. Each property and the statu
 - **Editor** ([Milkdown Crepe](https://milkdown.dev)): live markdown, `/` menu for headings, lists, task lists, tables, quotes, code blocks (syntax highlighting, language picker, copy button), images and math.
 - **Status updates**: a comment-style timeline on each project (`updates` in the frontmatter, newest first, with an optional name). The latest update shows on the board card and in the list view and CSV.
 - **Blocked**: tick Blocked on a project to outline its card in red; an optional reason shows on the card (`blocked` / `blockedReason` in the frontmatter).
-- **Maintenance**: projects in the **Live** column have a Maintenance checkbox that outlines the card in yellow (`maintenance` in the frontmatter). A project that is both blocked and in maintenance gets a yellow outline with a red one around it. Moving a project out of Live hides the flag; it comes back if the project returns to Live.
+- **Maintenance**: a project in the **Live** column is in maintenance whenever it has an open to-do, and its card is outlined in yellow. There is nothing to tick: adding a to-do to a live project puts it into maintenance, and checking off the last one takes it out again. The reason shows next to the flag — the to-do's own text, or `3 to-dos open` once there is more than one — on the card, the project page, the list view and the CSV. A project that is both blocked and in maintenance gets a yellow outline with a red one around it. Maintenance is worked out from the to-dos rather than stored, so it is never in the frontmatter, and a `maintenance:` line left by an older version is ignored and dropped the next time the project is saved.
 - **Groups**: define teams and their people under Configuration. Pick a project's group when creating it on the board (the last one you used is preselected) or on the project page. Owner fields on the project and its to-dos then open a dropdown of that group's members; other people show up as you type, and any other name can still be typed in. The group shows on the card and as a column in the list view and CSV.
 - **To-dos**: add from the box under the list with Enter or **Add** (always shown on a phone), check off, edit inline, drag to reorder (a blue line shows where the to-do will land), assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.) **📅 Schedule** books time to work on one: it offers Google Calendar and Outlook on the web, which open a pre-filled draft, or a `.ics` download for desktop Outlook, Apple Calendar and the rest. The block starts as an hour at 9am tomorrow and is meant to be dragged to a free slot in the calendar itself, where the day's conflicts are visible. Nothing is saved in Clique, so it never claims to know what your calendar actually holds.
 - **GitHub issues**: give a project one or more **GitHub repos** and each open to-do gets **🔗 Issue**. **Create on GitHub** opens GitHub's new-issue form in a new tab with the to-do filled in; with several repos there's one **Create in owner/repo** link for each. Submit the form there, then paste its link or number back into Clique to link it; with several repos, a number also asks which repo it's in. An existing issue is linked the same way, as long as it's in one of the project's repos. The to-do then shows the issue number as a link, with the repo's name in front when the project has several (`website#12`), and **×** unlinks it. Removing a repo leaves its linked issues in place. A project file with the older single `repo:` line keeps working, and is rewritten as `repos:` the next time its repos change. Clique holds no GitHub login, so issues are created under each person's own account, and it doesn't read an issue's state: closing one doesn't check off the to-do.

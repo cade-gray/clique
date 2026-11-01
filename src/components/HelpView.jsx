@@ -8,7 +8,7 @@ const STAGES = {
   'in-progress': 'The working space while it is built: to-dos with owners, design notes, field mappings, open questions and status updates.',
   review: 'Testing, sign-off and go-live preparation.',
   [LIVE_STATUS]:
-    'In production. The page becomes the solution’s wiki: what it does, how it works, the systems it touches, runbooks and support notes. Tick Maintenance while it is being changed or fixed.',
+    'In production. The page becomes the solution’s wiki: what it does, how it works, the systems it touches, runbooks and support notes. A to-do added here puts the project into maintenance until it is checked off.',
   graveyard: 'Retired. Nothing is deleted, so the history and documentation are still there if someone asks how it used to work, or it comes back.',
 };
 
@@ -71,7 +71,8 @@ export default function HelpView({ workspace }) {
             <strong>To-dos</strong> with owners. Checked-off items move to a history section rather than disappearing.
           </li>
           <li>
-            <strong>Blocked</strong> (red outline) and <strong>Maintenance</strong> (yellow outline, Live projects only) flags that stand out on the board.
+            <strong>Blocked</strong> (red outline), set by hand with a reason, and <strong>Maintenance</strong> (yellow outline), which a Live project
+            goes into on its own while it has an open to-do.
           </li>
         </ul>
       </section>

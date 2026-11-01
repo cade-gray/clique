@@ -239,7 +239,13 @@ function ProjectProps({ project, workspace, patch }) {
       {project.status === LIVE_STATUS && (
         <div className="prop-row">
           <label>Maintenance</label>
-          <input type="checkbox" checked={project.maintenance} onChange={(e) => patch({ maintenance: e.target.checked })} />
+          {project.maintenance ? (
+            <span className="maintenance-state">
+              🔧 In maintenance{project.maintenanceReason && <span className="muted"> — {project.maintenanceReason}</span>}
+            </span>
+          ) : (
+            <span className="muted maintenance-off">Not in maintenance. A live project with an open to-do goes into maintenance by itself.</span>
+          )}
         </div>
       )}
       {workspace.properties.map((def) => (
@@ -344,6 +350,7 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
         {project.maintenance && (
           <div className="phone-flag maintenance">
             <strong>🔧 In maintenance</strong>
+            {project.maintenanceReason && <span>: {project.maintenanceReason}</span>}
           </div>
         )}
       </div>

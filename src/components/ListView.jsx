@@ -93,12 +93,15 @@ export default function ListView({ workspace, filters, onFilters }) {
         sort: (p) => (p.blocked ? 0 : 1),
         text: (p) => (p.blocked ? 'Yes' : ''),
         reason: (p) => p.blockedReason,
+        reasonLabel: 'Blocked reason',
       },
       {
         id: 'maintenance',
         label: 'Maintenance',
         sort: (p) => (p.maintenance ? 0 : 1),
         text: (p) => (p.maintenance ? 'Yes' : ''),
+        reason: (p) => p.maintenanceReason,
+        reasonLabel: 'Maintenance reason',
       },
       ...workspace.properties.map((def) => ({
         id: `prop:${def.key}`,
@@ -149,7 +152,7 @@ export default function ListView({ workspace, filters, onFilters }) {
     const header = [];
     for (const c of columns) {
       header.push(c.label);
-      if (c.reason) header.push('Blocked reason');
+      if (c.reason) header.push(c.reasonLabel);
       if (c.id === 'subtasks') header.push('To-dos done', 'To-dos total', 'Progress');
       if (c.extra) header.push('Latest update by', 'Latest update date');
     }
@@ -359,6 +362,7 @@ function PhoneRow({ project, workspace, status }) {
         {project.maintenance && (
           <div className="card-maintenance">
             <strong>🔧 In maintenance</strong>
+            {project.maintenanceReason && <span>: {project.maintenanceReason}</span>}
           </div>
         )}
         <div className="phone-row-meta">
@@ -381,7 +385,13 @@ function Cell({ c, p, workspace }) {
         {p.blockedReason && <div>{p.blockedReason}</div>}
       </div>
     ) : null;
-  if (c.id === 'maintenance') return p.maintenance ? <div className="maintenance-cell">🔧 In maintenance</div> : null;
+  if (c.id === 'maintenance')
+    return p.maintenance ? (
+      <div className="maintenance-cell">
+        <strong>🔧 In maintenance</strong>
+        {p.maintenanceReason && <div>{p.maintenanceReason}</div>}
+      </div>
+    ) : null;
   if (c.id === 'subtasks') {
     const { done, total } = p.subtasks;
     if (!total) return null;
