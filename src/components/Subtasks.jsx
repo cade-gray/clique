@@ -4,9 +4,13 @@ import Popover from './Popover.jsx';
 import { downloadIcs, formatSlot, icsFilename, icsText, outlookUrl, subtaskEvent } from './calendar.js';
 import { docOf } from './pages.js';
 import { PeopleInput, Tag, fitToContent, formatDateTime, timeAgo, toPeople } from './props.jsx';
+import { moveToSlot, movesNowhere, slotAt } from './todos.js';
+import { useTouchDrag } from './useTouchDrag.js';
 
 export default function Subtasks({ items, pages, base, projectTitle, onChange, onAddDoc, onOpenDoc }) {
   const [dragIndex, setDragIndex] = useState(null);
+  const [slot, setSlot] = useState(null);
+  const listRef = useRef(null);
   const phone = usePhone();
 
   // Keep each item's index in the full list so edits and reordering target the right entry.
@@ -20,16 +24,45 @@ export default function Subtasks({ items, pages, base, projectTitle, onChange, o
   const update = (i, fields) => onChange(items.map((s, j) => (j === i ? { ...s, ...fields } : s)));
   const remove = (i) => onChange(items.filter((_, j) => j !== i));
   const setDone = (i, done) => update(i, { done, doneAt: done ? new Date().toISOString() : undefined });
-  const move = (from, to) => {
-    if (from === to) return;
-    const next = [...items];
-    const [it] = next.splice(from, 1);
-    next.splice(to, 0, it);
-    onChange(next);
+
+  // Where a drop would land. Nothing shows for a drop that wouldn't move the to-do.
+  const from = open.findIndex((e) => e.i === dragIndex);
+  const target = slot === null || movesNowhere(from, slot) ? null : slot;
+
+  const endDrag = () => {
+    setDragIndex(null);
+    setSlot(null);
+  };
+  const finishDrag = (at) => {
+    if (at !== null && !movesNowhere(from, at)) onChange(moveToSlot(items, open.map((o) => o.s), from, at));
+    endDrag();
+  };
+  const touchHandle = useTouchDrag({ listRef, onStart: setDragIndex, onSlot: setSlot, onDrop: finishDrag, onCancel: endDrag });
+
+  // Worked out from the rows, not the element under the pointer, so that the gaps between to-dos
+  // and the space around the list work as well as the to-dos themselves.
+  const dragOver = (e) => {
+    if (dragIndex === null) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rows = [...listRef.current.children].map((row) => row.getBoundingClientRect());
+    setSlot(slotAt(rows.map((r) => r.top + r.height / 2), e.clientY));
+  };
+  const drop = (e) => {
+    if (dragIndex === null) return;
+    e.preventDefault();
+    finishDrag(slot);
   };
 
   return (
-    <section className="subtasks">
+    <section
+      className="subtasks"
+      onDragOver={dragOver}
+      onDrop={drop}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setSlot(null);
+      }}
+    >
       <h3>
         To-dos{' '}
         {items.length > 0 && (
@@ -38,26 +71,30 @@ export default function Subtasks({ items, pages, base, projectTitle, onChange, o
           </span>
         )}
       </h3>
-      <ul>
+      <ul ref={listRef}>
         {open.map(({ s, i }, n) => (
           <li
             key={i}
-            className={dragIndex === i ? 'dragging' : ''}
-            onDragOver={(e) => dragIndex !== null && e.preventDefault()}
-            onDrop={() => {
-              if (dragIndex !== null) move(dragIndex, i);
-              setDragIndex(null);
-            }}
+            className={[dragIndex === i && 'dragging', target === n && 'drop-before', target === n + 1 && n === open.length - 1 && 'drop-after'].filter(Boolean).join(' ')}
           >
             <span
               className="handle"
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.effectAllowed = 'move';
-                setDragIndex(i);
-              }}
-              onDragEnd={() => setDragIndex(null)}
               title="Drag to reorder"
+              {...(phone
+                ? touchHandle(i)
+                : {
+                    draggable: true,
+                    onDragStart: (e) => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', s.text);
+                      // The whole card follows the pointer, held where it was picked up, not just the handle.
+                      const card = e.currentTarget.closest('li');
+                      const box = card.getBoundingClientRect();
+                      e.dataTransfer.setDragImage(card, e.clientX - box.left, e.clientY - box.top);
+                      setDragIndex(i);
+                    },
+                    onDragEnd: endDrag,
+                  })}
             >
               ⋮⋮
             </span>
@@ -98,17 +135,6 @@ export default function Subtasks({ items, pages, base, projectTitle, onChange, o
                   <button className="add-doc" onClick={() => onAddDoc(i)} title="Write a doc for this to-do">
                     📝 Add doc
                   </button>
-                )}
-                {/* Drag handles need a mouse, so a phone gets buttons. */}
-                {phone && open.length > 1 && (
-                  <span className="subtask-move">
-                    <button className="icon" disabled={n === 0} onClick={() => move(i, open[n - 1].i)} aria-label={`Move up: ${s.text}`}>
-                      ↑
-                    </button>
-                    <button className="icon" disabled={n === open.length - 1} onClick={() => move(i, open[n + 1].i)} aria-label={`Move down: ${s.text}`}>
-                      ↓
-                    </button>
-                  </span>
                 )}
               </div>
             </div>
