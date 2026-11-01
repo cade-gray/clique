@@ -101,14 +101,14 @@ export default function Subtasks({ items, pages, base, projectTitle, onChange, o
                 )}
                 {/* Drag handles need a mouse, so a phone gets buttons. */}
                 {phone && open.length > 1 && (
-                  <>
+                  <span className="subtask-move">
                     <button className="icon" disabled={n === 0} onClick={() => move(i, open[n - 1].i)} aria-label={`Move up: ${s.text}`}>
                       ↑
                     </button>
                     <button className="icon" disabled={n === open.length - 1} onClick={() => move(i, open[n + 1].i)} aria-label={`Move down: ${s.text}`}>
                       ↓
                     </button>
-                  </>
+                  </span>
                 )}
               </div>
             </div>
