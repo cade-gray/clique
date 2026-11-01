@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
 import { usePhone } from '../usePhone.js';
 import Popover from './Popover.jsx';
-import { downloadIcs, formatSlot, icsFilename, icsText, outlookUrl, subtaskEvent } from './calendar.js';
 import { issueLink, issueNumber, newIssueUrl } from './github.js';
 import { docOf } from './pages.js';
 import { PeopleInput, Tag, fitToContent, formatDateTime, timeAgo, toPeople } from './props.jsx';
+import ScheduleButton from './ScheduleButton.jsx';
 import { moveToSlot, movesNowhere, slotAt } from './todos.js';
 import { useTouchDrag } from './useTouchDrag.js';
 
@@ -129,7 +129,7 @@ export default function Subtasks({ items, pages, base, repo, projectTitle, onCha
                 />
               </div>
               <div className="subtask-actions">
-                <ScheduleBlock text={s.text} owners={s.owners} projectTitle={projectTitle} />
+                <ScheduleButton text={s.text} owners={s.owners} projectTitle={projectTitle} />
                 {s.doc ? (
                   <TodoDoc page={docOf(s, pages)} base={base} onOpen={onOpenDoc} />
                 ) : (
@@ -279,57 +279,6 @@ function IssueMenu({ anchor, repo, newIssue, onLink, onClose }) {
         </button>
       </form>
       <span className="popover-hint popover-note">{invalid ? 'That isn’t an issue in this project’s repo.' : 'After creating it, paste its link here.'}</span>
-    </Popover>
-  );
-}
-
-// Books time to work on a to-do. Clique hands the event to a calendar and keeps nothing: there is
-// no way for it to know whether the block was kept, moved or deleted afterwards.
-function ScheduleBlock({ text, owners, projectTitle }) {
-  const [open, setOpen] = useState(false);
-  const anchor = useRef(null);
-  return (
-    <span className="schedule">
-      <button
-        ref={anchor}
-        className="schedule-btn"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        title="Block time to work on this"
-      >
-        📅 Schedule
-      </button>
-      {open && (
-        <ScheduleMenu
-          anchor={anchor}
-          event={subtaskEvent({ text, owners: toPeople(owners), projectTitle, url: window.location.href })}
-          filename={icsFilename(text)}
-          onClose={() => setOpen(false)}
-        />
-      )}
-    </span>
-  );
-}
-
-function ScheduleMenu({ anchor, event, filename, onClose }) {
-  return (
-    <Popover title="Block time to work on this" anchor={anchor} onClose={onClose} className="schedule-menu">
-      <div className="popover-label">Block time to work on this</div>
-      <span className="popover-hint popover-note">
-        {formatSlot(event.start, event.end)} — move it to a free slot once your calendar is open.
-      </span>
-      <a className="popover-item" href={outlookUrl(event)} target="_blank" rel="noreferrer" onClick={onClose}>
-        Outlook on the web <span className="muted">↗</span>
-      </a>
-      <button
-        className="popover-item"
-        onClick={() => {
-          downloadIcs(filename, icsText(event));
-          onClose();
-        }}
-      >
-        Download .ics file
-      </button>
     </Popover>
   );
 }

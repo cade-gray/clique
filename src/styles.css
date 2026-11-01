@@ -526,6 +526,7 @@ ul.people-menu .people-menu-label, ul.people-menu .people-menu-label:hover { bac
 .workday-meta a { color: var(--accent); }
 .workday-meta a:hover { text-decoration: underline; }
 .workday-reason { margin-top: 2px; color: var(--muted); font-size: 13px; }
+.workday-actions { margin: 2px 0 0 -7px; }
 
 .stats { max-width: 1100px; }
 .stats-loading { padding: 40px 20px; text-align: center; }
