@@ -161,6 +161,7 @@ export default function ProjectView({ id, pageId, workspace }) {
                 items={project.subtasks}
                 pages={project.pages}
                 base={base}
+                repo={project.repo}
                 projectTitle={project.title}
                 onChange={(subtasks) => patch({ subtasks })}
                 onAddDoc={addTodoDoc}
@@ -216,6 +217,10 @@ function ProjectProps({ project, workspace, patch }) {
           </select>
         </div>
       )}
+      <div className="prop-row prop-row-url">
+        <label>GitHub repo</label>
+        <PropertyInput def={{ type: 'url' }} value={project.repo} onChange={(repo) => patch({ repo })} />
+      </div>
       <div className="prop-row">
         <label>Blocked</label>
         <input
@@ -321,6 +326,7 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
             items={project.subtasks}
             pages={project.pages}
             base={base}
+            repo={project.repo}
             projectTitle={project.title}
             onChange={(subtasks) => patch({ subtasks })}
             onAddDoc={onAddTodoDoc}

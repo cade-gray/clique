@@ -2,12 +2,13 @@ import { useRef, useState } from 'react';
 import { usePhone } from '../usePhone.js';
 import Popover from './Popover.jsx';
 import { downloadIcs, formatSlot, icsFilename, icsText, outlookUrl, subtaskEvent } from './calendar.js';
+import { issueLink, issueNumber, newIssueUrl } from './github.js';
 import { docOf } from './pages.js';
 import { PeopleInput, Tag, fitToContent, formatDateTime, timeAgo, toPeople } from './props.jsx';
 import { moveToSlot, movesNowhere, slotAt } from './todos.js';
 import { useTouchDrag } from './useTouchDrag.js';
 
-export default function Subtasks({ items, pages, base, projectTitle, onChange, onAddDoc, onOpenDoc }) {
+export default function Subtasks({ items, pages, base, repo, projectTitle, onChange, onAddDoc, onOpenDoc }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [slot, setSlot] = useState(null);
   const listRef = useRef(null);
@@ -136,6 +137,16 @@ export default function Subtasks({ items, pages, base, projectTitle, onChange, o
                     📝 Add doc
                   </button>
                 )}
+                {s.issue ? (
+                  <span className="subtask-issue">
+                    <IssueLink url={s.issue} />
+                    <button className="icon" onClick={() => update(i, { issue: undefined })} aria-label={`Unlink issue #${issueNumber(s.issue)}`} title="Unlink this issue">
+                      ×
+                    </button>
+                  </span>
+                ) : (
+                  repo && <IssueBlock repo={repo} text={s.text} owners={s.owners} projectTitle={projectTitle} onLink={(issue) => update(i, { issue })} />
+                )}
               </div>
             </div>
             <button className="icon" onClick={() => remove(i)} title="Delete subtask">
@@ -180,6 +191,7 @@ export default function Subtasks({ items, pages, base, projectTitle, onChange, o
                     )}
                   </div>
                   <TodoDoc page={docOf(s, pages)} base={base} onOpen={onOpenDoc} />
+                  {s.issue && <IssueLink url={s.issue} />}
                 </div>
                 <button className="icon" onClick={() => remove(i)} title="Delete subtask">
                   ×
@@ -200,6 +212,74 @@ function TodoDoc({ page, base, onOpen }) {
     <a className="subtask-doc" href={`${base}/${encodeURIComponent(page.id)}`} title={page.title} aria-label={`Docs: ${page.title}`} onClick={onOpen}>
       📝 Docs
     </a>
+  );
+}
+
+function IssueLink({ url }) {
+  return (
+    <a className="subtask-issue-link" href={url} target="_blank" rel="noreferrer" title="Open on GitHub">
+      🔗 #{issueNumber(url)}
+    </a>
+  );
+}
+
+function IssueBlock({ repo, text, owners, projectTitle, onLink }) {
+  const [open, setOpen] = useState(false);
+  const anchor = useRef(null);
+  return (
+    <span className="schedule">
+      <button ref={anchor} className="schedule-btn" aria-expanded={open} onClick={() => setOpen((o) => !o)} title="Create or link a GitHub issue">
+        🔗 Issue
+      </button>
+      {open && (
+        <IssueMenu
+          anchor={anchor}
+          repo={repo}
+          newIssue={newIssueUrl(repo, { text, owners: toPeople(owners), projectTitle, url: window.location.href })}
+          onLink={onLink}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </span>
+  );
+}
+
+// Stays open when the form opens in its own tab, ready for the new issue's link on the way back.
+function IssueMenu({ anchor, repo, newIssue, onLink, onClose }) {
+  const [value, setValue] = useState('');
+  const [invalid, setInvalid] = useState(false);
+
+  function submit(e) {
+    e.preventDefault();
+    const url = issueLink(value, repo);
+    if (!url) return setInvalid(true);
+    onLink(url);
+    onClose();
+  }
+
+  return (
+    <Popover title="GitHub issue" anchor={anchor} onClose={onClose} className="schedule-menu issue-menu">
+      <div className="popover-label">GitHub issue</div>
+      <a className="popover-item" href={newIssue} target="_blank" rel="noreferrer">
+        Create on GitHub <span className="muted">↗</span>
+      </a>
+      <form className="issue-form" onSubmit={submit}>
+        <input
+          value={value}
+          placeholder="Issue link or number"
+          aria-label="Issue link or number"
+          aria-invalid={invalid}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setInvalid(false);
+          }}
+        />
+        <button type="submit" className="toolbar-btn" disabled={!value.trim()}>
+          Link
+        </button>
+      </form>
+      <span className="popover-hint popover-note">{invalid ? 'That isn’t an issue in this project’s repo.' : 'After creating it, paste its link here.'}</span>
+    </Popover>
   );
 }
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { Store, parseMarkdown, stringifyMarkdown } from './store.js';
+import { Store, normalizeRepo, parseMarkdown, stringifyMarkdown } from './store.js';
 
 async function freshStore() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'clique-'));
@@ -129,6 +129,76 @@ test('links to pages removed outside the app are ignored, and bad ids are droppe
     { text: 'c', done: false },
     { text: 'd', done: false },
   ]);
+});
+
+test('normalizeRepo accepts the ways a repository gets copied, and nothing else', () => {
+  const repo = 'https://github.com/cade-gray/clique';
+  for (const input of [
+    repo,
+    `${repo}/`,
+    `${repo}.git`,
+    `  ${repo}  `,
+    `${repo}/issues`,
+    `${repo}/tree/main/src`,
+    `${repo}?tab=readme`,
+    'http://github.com/cade-gray/clique',
+    'github.com/cade-gray/clique',
+    'GitHub.com/cade-gray/clique',
+    'git@github.com:cade-gray/clique.git',
+  ])
+    assert.equal(normalizeRepo(input), repo, input);
+  assert.equal(normalizeRepo('https://github.acme.bank/it/core.sync'), 'https://github.acme.bank/it/core.sync');
+  for (const input of ['', null, undefined, 'clique', 'https://github.com/cade-gray', 'cade-gray/clique', 'javascript:alert(1)//x/y/z', 'https://github.com'])
+    assert.equal(normalizeRepo(input), null, String(input));
+});
+
+test('a project\'s repo is saved in one form, can be cleared, and rejects anything else', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Repo' });
+  assert.equal(p.repo, null);
+
+  const saved = await store.updateProject(p.id, { repo: 'git@github.com:cade-gray/clique.git' });
+  assert.equal(saved.repo, 'https://github.com/cade-gray/clique');
+  assert.deepEqual(saved.properties, {});
+  assert.match(await fs.readFile(store.projectFile(p.id), 'utf8'), /^repo: https:\/\/github\.com\/cade-gray\/clique$/m);
+
+  await assert.rejects(store.updateProject(p.id, { repo: 'not a repo' }), (e) => e.status === 400);
+  assert.equal((await store.getProject(p.id)).repo, saved.repo);
+
+  assert.equal((await store.updateProject(p.id, { repo: null })).repo, null);
+  assert.doesNotMatch(await fs.readFile(store.projectFile(p.id), 'utf8'), /^repo:/m);
+  assert.equal((await store.listProjects()).find((x) => x.id === p.id).repo, null);
+});
+
+test('repo is a built-in key, so a property can\'t take it', async () => {
+  const store = await freshStore();
+  const ws = await store.getWorkspace();
+  await assert.rejects(store.saveWorkspace({ ...ws, properties: [...ws.properties, { key: 'repo', name: 'Repo', type: 'url' }] }), (e) => e.status === 400);
+});
+
+test('a hand-edited repo that isn\'t one reads as no repo', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Hand edited' });
+  const file = store.projectFile(p.id);
+  await fs.writeFile(file, (await fs.readFile(file, 'utf8')).replace('title:', 'repo: javascript:alert(1)\ntitle:'));
+  assert.equal((await store.getProject(p.id)).repo, null);
+});
+
+test('a to-do keeps a linked issue through edits, and drops anything that isn\'t one', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Issues' });
+  const issue = 'https://github.com/cade-gray/clique/issues/27';
+  await store.updateProject(p.id, {
+    subtasks: [
+      { text: 'a', done: false, issue },
+      { text: 'b', done: false, issue: 'javascript:alert(1)' },
+      { text: 'c', done: false, issue: 'https://github.com/cade-gray/clique/pull/29' },
+      { text: 'd', done: false, issue: 27 },
+    ],
+  });
+  const got = await store.updateProject(p.id, { subtasks: (await store.getProject(p.id)).subtasks.map((s) => ({ ...s, done: true })) });
+  assert.deepEqual(got.subtasks.map((s) => s.issue), [issue, undefined, undefined, undefined]);
+  assert.match(await fs.readFile(store.projectFile(p.id), 'utf8'), /issue: https:\/\/github\.com\/cade-gray\/clique\/issues\/27/);
 });
 
 test('body saves detect conflicts, but metadata edits do not cause them', async () => {

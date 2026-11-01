@@ -129,7 +129,7 @@ groups:                   # teams; each project can belong to one
 
 | Field | Rules |
 | --- | --- |
-| `key` | Same format as a column `id`, unique. It becomes a flat key in every project's frontmatter. It can't be one of the built-in keys: `title`, `status`, `order`, `group`, `subtasks`, `blocked`, `blockedReason`, `maintenance`, `updates`, `created`, `updated`. |
+| `key` | Same format as a column `id`, unique. It becomes a flat key in every project's frontmatter. It can't be one of the built-in keys: `title`, `status`, `order`, `group`, `repo`, `subtasks`, `blocked`, `blockedReason`, `maintenance`, `updates`, `created`, `updated`. |
 | `name` | The label shown in the UI and the CSV, up to 80 characters. |
 | `type` | One of the types below. |
 | `options` | For `select` and `multi_select`: a list of `{ value, color }`. Colors: `gray`, `brown`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `red`. |
@@ -173,6 +173,7 @@ Each project is a markdown file with YAML frontmatter. The properties from `work
 title: Website Redesign
 status: in-progress          # a column id from workspace.yaml
 group: it-integrations       # optional; a group id from workspace.yaml
+repo: https://github.com/acme/website   # optional; the GitHub repository for this project's issues
 order: 0                     # position within the column
 blocked: true                # optional; shows a red outline on the card
 blockedReason: Waiting on design sign-off
@@ -183,6 +184,7 @@ subtasks:                    # shown as "To-dos" in the app
     doneAt: 2026-10-01T12:00:00.000Z   # set when checked off; feeds the History section
     owners: [Sam]            # optional, any number per to-do
     doc: wireframe-notes     # optional; the page in this folder written for this to-do
+    issue: https://github.com/acme/website/issues/12   # optional; the GitHub issue linked to this to-do
 updates:                     # status updates, oldest first
   - id: a1b2c3d4
     at: 2026-10-02T15:00:00.000Z
@@ -217,6 +219,7 @@ Property, status and to-do changes save immediately. Each property and the statu
 - **Maintenance**: projects in the **Live** column have a Maintenance checkbox that outlines the card in yellow (`maintenance` in the frontmatter). A project that is both blocked and in maintenance gets a yellow outline with a red one around it. Moving a project out of Live hides the flag; it comes back if the project returns to Live.
 - **Groups**: define teams and their people under Configuration. Pick a project's group when creating it on the board (the last one you used is preselected) or on the project page. Owner fields on the project and its to-dos then open a dropdown of that group's members; other people show up as you type, and any other name can still be typed in. The group shows on the card and as a column in the list view and CSV.
 - **To-dos**: check off, edit inline, drag to reorder (a blue line shows where the to-do will land), assign multiple owners. Checked-off to-dos move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.) **📅 Schedule** books time to work on one: it offers Outlook on the web, which opens a pre-filled draft, or a `.ics` download for desktop Outlook, Apple Calendar and the rest. The block starts as an hour at 9am tomorrow and is meant to be dragged to a free slot in the calendar itself, where the day's conflicts are visible. Nothing is saved in Clique, so it never claims to know what your calendar actually holds.
+- **GitHub issues**: give a project its **GitHub repo** and each open to-do gets **🔗 Issue**. **Create on GitHub** opens GitHub's new-issue form in a new tab with the to-do filled in; submit it there, then paste its link or number back into Clique to link it. An existing issue is linked the same way, as long as it's in that repo. The to-do then shows the issue number as a link, and **×** unlinks it. Clique holds no GitHub login, so issues are created under each person's own account, and it doesn't read an issue's state: closing one doesn't check off the to-do.
 - **Global properties** (Configuration screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.
 - **Import from Microsoft Planner**: turn a Planner plan into projects, one per task. See below.
 - **Stats** (top bar): two sections on one page. *Portfolio* is the management summary — active and live counts, go-lives in the last 90 days, typical time from created to go-live, where the work sits by column, each group's portfolio by column, and created vs went-live by month. *Day to day* is the operational side — projects that are blocked, past their go-live date or untouched for 30 days; what each person is carrying; and recent activity. Every chart has a **Show the numbers** table under it, and the page prints as a light-themed report. History comes from `events.ndjson`; the snapshot comes from the project files.
@@ -764,5 +767,6 @@ src/components/pages.js        pure helpers that split a project's pages into wi
 src/components/workday.js      pure helpers that collect one person's to-dos across projects, with tests in workday.test.js
 src/components/todos.js        pure helpers for dragging to-dos into a new order, with tests in todos.test.js
 src/components/useTouchDrag.js  dragging a to-do by touch, which browsers don't do natively
+src/components/github.js       pure helpers for the new-issue form and linking issues, with tests in github.test.js
 src/components/charts.jsx  bars, stacked bars, columns, tiles and meters built from divs (no charting library)
 ```
