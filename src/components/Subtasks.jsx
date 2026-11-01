@@ -90,10 +90,11 @@ export default function Subtasks({ items, pages, base, projectTitle, onChange, o
                   onChange={(owners) => update(i, { owners: owners.length ? owners : undefined })}
                 />
               </div>
-              <TodoDoc page={docOf(s, pages)} base={base} onOpen={onOpenDoc} />
               <div className="subtask-actions">
                 <ScheduleBlock text={s.text} owners={s.owners} projectTitle={projectTitle} />
-                {!s.doc && (
+                {s.doc ? (
+                  <TodoDoc page={docOf(s, pages)} base={base} onOpen={onOpenDoc} />
+                ) : (
                   <button className="add-doc" onClick={() => onAddDoc(i)} title="Write a doc for this to-do">
                     📝 Add doc
                   </button>
@@ -166,11 +167,12 @@ export default function Subtasks({ items, pages, base, projectTitle, onChange, o
   );
 }
 
+// The page is named after the to-do, so the title would only repeat the line above it.
 function TodoDoc({ page, base, onOpen }) {
   if (!page) return null;
   return (
-    <a className="subtask-doc" href={`${base}/${encodeURIComponent(page.id)}`} onClick={onOpen}>
-      📝 {page.title}
+    <a className="subtask-doc" href={`${base}/${encodeURIComponent(page.id)}`} title={page.title} aria-label={`Docs: ${page.title}`} onClick={onOpen}>
+      📝 Docs
     </a>
   );
 }
