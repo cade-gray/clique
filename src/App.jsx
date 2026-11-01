@@ -8,12 +8,14 @@ import Settings from './components/Settings.jsx';
 import ImportView from './components/ImportView.jsx';
 import HelpView from './components/HelpView.jsx';
 import StatsView from './components/StatsView.jsx';
+import WorkdayView from './components/WorkdayView.jsx';
 import { MoreView, PhoneTabs } from './components/PhoneNav.jsx';
 
 // Hash routes keep deep links working on IIS without URL rewrite rules:
 //   #/            board view
 //   #/list        list view (table + export)
 //   #/stats       portfolio figures and what needs attention
+//   #/workday     one person's to-dos across every project (#/workday/:person to link to someone)
 //   #/p/:id       project overview
 //   #/p/:id/:page page inside a project
 //   #/settings    configuration: groups, project statuses and properties
@@ -25,6 +27,7 @@ function parseHash() {
   if (parts[0] === 'p' && parts[1]) return { view: 'project', id: parts[1], page: parts[2] || null };
   if (parts[0] === 'list') return { view: 'list' };
   if (parts[0] === 'stats') return { view: 'stats' };
+  if (parts[0] === 'workday') return { view: 'workday', person: parts[1] || null };
   if (parts[0] === 'settings') return { view: 'settings' };
   if (parts[0] === 'import') return { view: 'import' };
   if (parts[0] === 'help') return { view: 'help' };
@@ -127,6 +130,9 @@ export default function App() {
           <a href="#/list" className={route.view === 'list' ? 'active' : ''}>
             List view
           </a>
+          <a href="#/workday" className={route.view === 'workday' ? 'active' : ''}>
+            Workday
+          </a>
           <a href="#/stats" className={route.view === 'stats' ? 'active' : ''}>
             Stats
           </a>
@@ -148,6 +154,7 @@ export default function App() {
         {error && <div className="banner error">Could not reach the server: {error.message}</div>}
         {workspace && route.view === 'board' && <Board workspace={workspace} filters={filters} onFilters={setFilters} />}
         {workspace && route.view === 'list' && <ListView workspace={workspace} filters={filters} onFilters={setFilters} />}
+        {workspace && route.view === 'workday' && <WorkdayView workspace={workspace} person={route.person} />}
         {workspace && route.view === 'stats' && <StatsView workspace={workspace} />}
         {workspace && route.view === 'project' && (
           <ProjectView key={route.id} id={route.id} pageId={route.page} workspace={workspace} />

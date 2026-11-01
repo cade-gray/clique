@@ -2,7 +2,7 @@ const TABS = [
   { id: 'board', href: '#/', label: 'Board', views: ['board'], icon: <><rect x="3" y="4" width="5" height="16" rx="1.5" /><rect x="10" y="4" width="5" height="11" rx="1.5" /><rect x="17" y="4" width="4" height="7" rx="1.5" /></> },
   { id: 'list', href: '#/list', label: 'List', views: ['list'], icon: <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" /> },
   { id: 'stats', href: '#/stats', label: 'Stats', views: ['stats'], icon: <path d="M5 20v-7M12 20V5M19 20v-11" /> },
-  { id: 'more', href: '#/more', label: 'More', views: ['more', 'settings', 'import', 'help'], icon: <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth="3.4" /> },
+  { id: 'more', href: '#/more', label: 'More', views: ['more', 'workday', 'settings', 'import', 'help'], icon: <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth="3.4" /> },
 ];
 
 // The phone's main navigation, in place of the top bar. Styles keep it hidden on larger screens.
@@ -27,6 +27,7 @@ export function MoreView({ theme, onToggleTheme }) {
     <div className="settings more">
       <h2>More</h2>
       <nav className="more-list">
+        <a href="#/workday">Workday</a>
         <a href="#/settings">Configuration</a>
         <a href="#/import">Import</a>
         <a href="#/help">Help</a>
