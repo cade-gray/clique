@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { defaultStart, formatSlot, icsFilename, icsText, outlookUrl, subtaskEvent } from './calendar.js';
+import { defaultStart, formatSlot, googleUrl, icsFilename, icsText, outlookUrl, subtaskEvent } from './calendar.js';
 
 const event = (over = {}) =>
   subtaskEvent({
@@ -48,6 +48,19 @@ test('the Outlook body is HTML, with the project link clickable and the text esc
   assert.match(body, /<a href="http:\/\/clique\.example\/#\/p\/online-banking-real-time-balances">/);
 });
 
+test('the Google link fills in the event, with times as UTC and the link in the details', () => {
+  const url = new URL(googleUrl(event()));
+  assert.equal(url.origin + url.pathname, 'https://calendar.google.com/calendar/render');
+  assert.equal(url.searchParams.get('action'), 'TEMPLATE');
+  assert.equal(url.searchParams.get('text'), 'Security review of token scopes — Online banking real-time balances');
+  assert.equal(url.searchParams.get('dates'), '20261023T130000Z/20261023T140000Z');
+  assert.equal(url.searchParams.get('details'), 'To-do on Online banking real-time balances.\nOwners: Alex, Sam\nhttp://clique.example/#/p/online-banking-real-time-balances');
+});
+
+test('the Google link leaves the link back out when the event has none', () => {
+  assert.equal(new URL(googleUrl(event({ url: undefined }))).searchParams.get('details'), 'To-do on Online banking real-time balances.\nOwners: Alex, Sam');
+});
+
 test('the .ics file is a valid single event with UTC stamps and CRLF endings', () => {
   const ics = icsText(event(), { now: new Date('2026-10-22T20:00:00Z'), uid: 'fixed@clique' });
   assert.ok(ics.startsWith('BEGIN:VCALENDAR\r\n'));
@@ -63,7 +76,7 @@ test('the .ics file is a valid single event with UTC stamps and CRLF endings', (
 test('.ics text escapes the characters that would otherwise end a field', () => {
   const ics = icsText(event({ text: 'Review scopes; tokens, keys \\ secrets' }), { uid: 'u@clique' });
   const summary = unfold(ics).find((l) => l.startsWith('SUMMARY:'));
-  assert.equal(summary, 'SUMMARY:Review scopes\; tokens\\, keys \\\\ secrets — Online banking real-time balances');
+  assert.equal(summary, 'SUMMARY:Review scopes\\; tokens\\, keys \\\\ secrets — Online banking real-time balances');
   // The description keeps its line breaks as the escaped form, not real ones.
   assert.match(unfold(ics).find((l) => l.startsWith('DESCRIPTION:')), /\\nOwners: Alex\\, Sam\\nhttp/);
 });

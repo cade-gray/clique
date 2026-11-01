@@ -3,7 +3,7 @@
   "version": "1.4.0",
   "description": "Home base for developed solutions: tracks each one through the software development lifecycle and keeps it documented after go-live, as markdown files on disk",
   "scripts": {
-    "dev": "concurrently -k -n api,web \"node --watch server/index.js\" \"vite\"",
+    "dev": "concurrently -k -n api,web \"node --watch server/index.js\" \"vite --host\"",
     "build": "vite build",
     "start": "node server/index.js",
     "test": "node --test server/*.test.js src/components/*.test.js"

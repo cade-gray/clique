@@ -1,6 +1,6 @@
 // Booking time to work on a to-do. Clique stores nothing about it: the event is handed straight
-// to Outlook on the web as a pre-filled draft, or saved as a .ics file for desktop Outlook,
-// Apple Calendar and anything else that reads the standard format.
+// to Google Calendar or Outlook on the web as a pre-filled draft, or saved as a .ics file for
+// desktop Outlook, Apple Calendar and anything else that reads the standard format.
 
 // Every block starts out as an hour tomorrow morning. Clique deliberately doesn't ask when:
 // the slot is meant to be moved in the calendar itself, where the day's conflicts are visible.
@@ -32,6 +32,17 @@ export function formatSlot(start, end) {
   const day = start.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const time = (d) => d.toLocaleString(undefined, { hour: 'numeric', minute: '2-digit' });
   return `${day}, ${time(start)} – ${time(end)}`;
+}
+
+// ---------- Google Calendar ----------
+
+const GOOGLE_COMPOSE = 'https://calendar.google.com/calendar/render';
+
+export function googleUrl(ev) {
+  const stamp = (d) => utcStamp(d).replace(/[-:]/g, '');
+  const details = ev.url ? `${ev.description}\n${ev.url}` : ev.description;
+  const query = new URLSearchParams({ action: 'TEMPLATE', text: ev.title, dates: `${stamp(ev.start)}/${stamp(ev.end)}`, details });
+  return `${GOOGLE_COMPOSE}?${query}`;
 }
 
 // ---------- Outlook on the web ----------
@@ -101,7 +112,7 @@ function icsTime(d) {
 
 // Backslash first, or it would escape the backslashes the other rules add.
 function icsEscape(s) {
-  return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
 }
 
 // A content line is at most 75 octets; the rest continues on the next line after a space.
@@ -136,23 +147,11 @@ export function icsFilename(text) {
   return `${slug || 'to-do'}.ics`;
 }
 
-function followIcsLink(text, attributes) {
+export function downloadIcs(name, text) {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
-  const a = Object.assign(document.createElement('a'), { href: url, ...attributes });
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
   document.body.append(a);
   a.click();
   a.remove();
-  return url;
-}
-
-export function downloadIcs(name, text) {
-  URL.revokeObjectURL(followIcsLink(text, { download: name }));
-}
-
-// A web page can't start a calendar app, but it can hand the browser a calendar event rather than
-// a file to save. A phone then offers to add it, and a computer saves it for the default calendar
-// app to open. The address outlives the click, because a phone reads it after asking.
-export function openIcs(text) {
-  const url = followIcsLink(text);
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  URL.revokeObjectURL(url);
 }
