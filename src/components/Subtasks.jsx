@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { usePhone } from '../usePhone.js';
 import Popover from './Popover.jsx';
 import { issueLink, issueNumber, newIssueUrl } from './github.js';
@@ -155,17 +155,7 @@ export default function Subtasks({ items, pages, base, repo, projectTitle, onCha
           </li>
         ))}
       </ul>
-      <input
-        className="subtask-new"
-        placeholder="+ Add a to-do"
-        onKeyDown={(e) => {
-          const v = e.currentTarget.value.trim();
-          if (e.key === 'Enter' && v) {
-            onChange([...items, { text: v, done: false }]);
-            e.currentTarget.value = '';
-          }
-        }}
-      />
+      <NewTodo onAdd={(text) => onChange([...items, { text, done: false }])} />
       {history.length > 0 && (
         <details className="subtask-history">
           <summary>History ({history.length})</summary>
@@ -206,6 +196,48 @@ export default function Subtasks({ items, pages, base, repo, projectTitle, onCha
 }
 
 // The page is named after the to-do, so the title would only repeat the line above it.
+// A to-do is one line of text that may wrap, so pasted line breaks become spaces and Enter adds it.
+// Text left in the box stays there on blur: a stray tap should not create a to-do.
+function NewTodo({ onAdd }) {
+  const [text, setText] = useState('');
+  const box = useRef(null);
+  useLayoutEffect(() => fitToContent(box.current), [text]);
+
+  function add() {
+    const v = text.trim();
+    if (!v) return;
+    onAdd(v);
+    setText('');
+    box.current.focus();
+  }
+
+  return (
+    <div className="subtask-new">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+        <path d="M8 3v10M3 8h10" />
+      </svg>
+      <textarea
+        ref={box}
+        rows={1}
+        value={text}
+        placeholder="Add a to-do"
+        aria-label="Add a to-do"
+        enterKeyHint="done"
+        onChange={(e) => setText(e.target.value.replace(/\s*\n\s*/g, ' '))}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            add();
+          }
+        }}
+      />
+      <button className="primary" disabled={!text.trim()} onClick={add}>
+        Add
+      </button>
+    </div>
+  );
+}
+
 function TodoDoc({ page, base, onOpen }) {
   if (!page) return null;
   return (
