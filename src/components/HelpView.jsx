@@ -84,8 +84,8 @@ export default function HelpView({ workspace }) {
             account; paste the link back into the to-do.
           </li>
           <li>
-            <a href="#/workday">Workday</a> lists one person's to-dos from every project, for planning a day. A <strong>Potential blocker</strong> label means the
-            project is blocked, which may or may not hold up that to-do.
+            <a href="#/workday">Workday</a> lists one person's to-dos from every project, for planning a day, with the same schedule, notes and issue buttons as the project page. A{' '}
+            <strong>Potential blocker</strong> label means the project is blocked, which may or may not hold up that to-do.
           </li>
           <li>
             <a href="#/list">List view</a> gives a sortable table of every project, with CSV export and a print layout for reports and audits. Use{' '}

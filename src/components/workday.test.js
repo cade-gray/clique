@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { todosFor, workdayPeople } from './workday.js';
+import { findTodo, todosFor, withTodo, workdayPeople } from './workday.js';
 
 const workspace = {
   columns: [{ id: 'backlog' }, { id: 'in-progress' }, { id: 'live' }, { id: 'graveyard' }],
@@ -71,4 +71,19 @@ test('a blocked project marks its open to-dos as potentially blocked, and nothin
   assert.equal(done[0].potentialBlocker, false);
   // The to-do itself is not marked blocked; only the label says anything about it.
   assert.equal('blocked' in open[0], false);
+});
+
+test('findTodo follows a to-do that moved, and refuses one it can\'t be sure of', () => {
+  const items = [{ text: 'a' }, { text: 'b' }, { text: 'b' }, { text: 'c' }];
+  assert.equal(findTodo(items, 'a'), 0);
+  assert.equal(findTodo(items, 'c'), 3);
+  assert.equal(findTodo(items, 'gone'), -1);
+  assert.equal(findTodo(items, 'b'), -1);
+});
+
+test('withTodo changes one to-do and keeps everything else on the list', () => {
+  const items = [{ text: 'a', owners: ['Sam'], doc: 'notes' }, { text: 'b', done: true, doneAt: 'then' }];
+  const changed = withTodo(items, 0, { issue: 'x' });
+  assert.deepEqual(changed, [{ text: 'a', owners: ['Sam'], doc: 'notes', issue: 'x' }, items[1]]);
+  assert.deepEqual(JSON.parse(JSON.stringify(withTodo(changed, 0, { issue: undefined }))), items);
 });

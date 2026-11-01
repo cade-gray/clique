@@ -16,6 +16,18 @@ export function workdayPeople(workspace, projects) {
   return [...seen.values()].sort((a, b) => a.localeCompare(b));
 }
 
+// Where a to-do is now, going by its text, since this page's copy can be out of date and to-dos have
+// no id. -1 if it has gone or been reworded, or if two to-dos read the same and it can't be told apart.
+export function findTodo(items, text) {
+  const found = items.flatMap((t, i) => (t.text === text ? [i] : []));
+  return found.length === 1 ? found[0] : -1;
+}
+
+// The whole list with one to-do changed, because to-dos are saved as a list.
+export function withTodo(items, index, fields) {
+  return items.map((t, i) => (i === index ? { ...t, ...fields } : t));
+}
+
 // Open to-dos follow the board: column by column, then each project's own order. `potentialBlocker`
 // only says the project is blocked; that may have nothing to do with this to-do, and a finished
 // to-do can't be held up by it.
