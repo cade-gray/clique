@@ -21,6 +21,8 @@ const enc = encodeURIComponent;
 
 // Keep in step with LIVE_STATUS in server/store.js: only projects in this column can be in maintenance.
 export const LIVE_STATUS = 'live';
+// Keep in step with GRAVEYARD_STATUS there too: the column for retired projects.
+export const GRAVEYARD_STATUS = 'graveyard';
 
 export const api = {
   workspace: () => request('GET', 'workspace'),

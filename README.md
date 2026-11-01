@@ -221,6 +221,7 @@ Property, status and to-do changes save immediately. Each property and the statu
 - **Import from Microsoft Planner**: turn a Planner plan into projects, one per task. See below.
 - **Stats** (top bar): two sections on one page. *Portfolio* is the management summary — active and live counts, go-lives in the last 90 days, typical time from created to go-live, where the work sits by column, each group's portfolio by column, and created vs went-live by month. *Day to day* is the operational side — projects that are blocked, past their go-live date or untouched for 30 days; what each person is carrying; and recent activity. Every chart has a **Show the numbers** table under it, and the page prints as a light-themed report. History comes from `events.ndjson`; the snapshot comes from the project files.
 - **Phones**: at 760px wide or less, and on a phone held sideways, Clique switches to a touch layout. The top bar becomes bottom tabs, with Configuration, Import, Help and the theme under **More**. The board shows one stage at a time: swipe or tap a stage name, and a dot marks stages with a blocked project. Browsers on phones don't start a drag from a touch, so a card's **⋯** button moves it to another stage or up and down within one, and to-dos get up and down arrows. A project opens to tabs for To-dos, Updates, Docs and Details; a project in Live opens on Docs. Docs start read-only behind **Edit page**, so a tap while scrolling a runbook doesn't bring up the keyboard. The list view shows rows with a sort picker instead of the table, and leaves out Columns and Print / PDF. Desktop is unchanged, and so is a tablet in portrait, which is wider than 760px.
+- **Workday** (top bar; under **More** on a phone): pick a person to see their open to-dos from every project in one list, for planning a day, with each to-do's project and column. Finished to-dos are collapsed under **Done**. If a project is blocked, its open to-dos carry a **Potential blocker** label with the reason, because a blocked project doesn't always mean a blocked to-do. Only to-dos the person owns are listed, not unassigned to-dos on projects they own, and retired projects in the Graveyard are left out. The page is read-only, follows the link (`#/workday/Sam`), and a bare `#/workday` opens on the person last picked in that browser.
 - **Help page** (top bar): explains what Clique is for and what each board column means, using the board's own column and property names, so new team members can find their way around.
 
 ## Importing from Microsoft Planner
@@ -754,11 +755,12 @@ server/planner.js      Microsoft Planner import: finds the task table in the exp
 server/xlsx.js         minimal .xlsx reader used by the Planner import (no dependency)
 src/App.jsx            hash router and top bar
 src/usePhone.js        whether the phone layout applies; keep its query in step with the phone @media rule in styles.css
-src/components/        Board, ListView, StatsView, ProjectView, Subtasks (to-dos), Updates, Settings, ImportView, HelpView, DocBody (autosave), MarkdownEditor (Crepe), calendar.js (Outlook link / .ics)
+src/components/        Board, ListView, StatsView, WorkdayView, ProjectView, Subtasks (to-dos), Updates, Settings, ImportView, HelpView, DocBody (autosave), MarkdownEditor (Crepe), calendar.js (Outlook link / .ics)
 src/components/PhoneBoard.jsx  the board on a phone: swipeable stages, compact cards, move and new-project sheets
 src/components/PhoneNav.jsx    bottom tabs and the More screen
 src/components/Sheet.jsx       bottom sheet; Popover opens as one on a phone
 src/components/phone.js        pure helpers for card placement and compact cards, with tests in phone.test.js
 src/components/pages.js        pure helpers that split a project's pages into wiki pages and to-do docs, with tests in pages.test.js
+src/components/workday.js      pure helpers that collect one person's to-dos across projects, with tests in workday.test.js
 src/components/charts.jsx  bars, stacked bars, columns, tiles and meters built from divs (no charting library)
 ```

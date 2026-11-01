@@ -502,6 +502,15 @@ ul.people-menu .people-menu-label, ul.people-menu .people-menu-label:hover { bac
 
 /* ---------- stats ---------- */
 
+.workday-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 16px; }
+.workday-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.workday-todo { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; overflow-wrap: anywhere; }
+.workday-todo.done .workday-text { text-decoration: line-through; color: var(--muted); }
+.workday-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; margin-top: 2px; color: var(--muted); font-size: 13px; }
+.workday-meta a { color: var(--accent); }
+.workday-meta a:hover { text-decoration: underline; }
+.workday-reason { margin-top: 2px; color: var(--muted); font-size: 13px; }
+
 .stats { max-width: 1100px; }
 .stats-loading { padding: 40px 20px; text-align: center; }
 .stats-heading { margin: 28px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
@@ -773,6 +782,9 @@ table.list tr.stale td:first-child { box-shadow: inset 3px 0 0 var(--handle); }
   .subtask-move { display: flex; margin-left: auto; }
   .subtask-new { min-height: 48px; padding-left: 8px; }
   .subtask-history summary { display: flex; align-items: center; min-height: 44px; font-size: 14px; }
+  .workday-picker select { flex: 1; min-width: 0; min-height: 44px; }
+  .workday-picker .small { width: 100%; }
+  .workday-meta a { display: inline-flex; align-items: center; min-height: 44px; }
 
   .update-form-row { flex-wrap: wrap; }
   .update-form-row .small { display: none; }

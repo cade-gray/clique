@@ -80,6 +80,10 @@ export default function HelpView({ workspace }) {
         <h3>Good to know</h3>
         <ul>
           <li>
+            <a href="#/workday">Workday</a> lists one person's to-dos from every project, for planning a day. A <strong>Potential blocker</strong> label means the
+            project is blocked, which may or may not hold up that to-do.
+          </li>
+          <li>
             <a href="#/list">List view</a> gives a sortable table of every project, with CSV export and a print layout for reports and audits. Use{' '}
             <strong>Columns</strong> to leave out detail management doesn't need.
           </li>
