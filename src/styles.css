@@ -399,6 +399,13 @@ ul.people-menu .people-menu-label, ul.people-menu .people-menu-label:hover { bac
 .subtask-main > .subtask-doc { align-self: flex-start; }
 .subtask-doc, .page-todo a { color: var(--accent); }
 .subtask-doc:hover, .page-todo a:hover { text-decoration: underline; }
+.subtask-issue { display: inline-flex; align-items: center; }
+.subtask-issue-link { align-self: flex-start; padding: 2px 6px; color: var(--accent); font-size: 13px; }
+.subtask-issue-link:hover { text-decoration: underline; }
+.issue-menu { min-width: 260px; }
+.issue-form { display: flex; gap: 6px; padding: 6px 8px 4px; }
+.issue-form input { flex: 1; min-width: 0; }
+.issue-form input[aria-invalid='true'] { border-color: var(--danger); }
 .schedule-menu .popover-item { justify-content: space-between; text-decoration: none; }
 .subtask-history { margin-top: 8px; }
 .subtask-history summary { cursor: pointer; color: var(--muted); font-size: 13px; padding: 4px 0; user-select: none; }
@@ -792,8 +799,10 @@ table.list tr.stale td:first-child { box-shadow: inset 3px 0 0 var(--handle); }
   .subtask-main { gap: 0; }
   .subtask-text { padding: 11px 4px 4px; }
   .subtask-actions { align-items: center; margin-top: -4px; }
-  .schedule-btn, .add-doc, .subtask-doc { min-height: 44px; }
-  .subtask-doc { display: inline-flex; align-items: center; }
+  .schedule-btn, .add-doc, .subtask-doc, .subtask-issue-link { min-height: 44px; }
+  .subtask-doc, .subtask-issue-link { display: inline-flex; align-items: center; }
+  .sheet .issue-form { padding: 6px 0; }
+  .issue-form input, .issue-form button { min-height: 44px; }
   .subtask-new { min-height: 48px; padding-left: 8px; }
   .subtask-history summary { display: flex; align-items: center; min-height: 44px; font-size: 14px; }
   .workday-picker select { flex: 1; min-width: 0; min-height: 44px; }

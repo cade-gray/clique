@@ -80,6 +80,10 @@ export default function HelpView({ workspace }) {
         <h3>Good to know</h3>
         <ul>
           <li>
+            Give a project its <strong>GitHub repo</strong> and its to-dos can create or link an issue there. New issues are written on GitHub under your own account;
+            paste the link back into the to-do.
+          </li>
+          <li>
             <a href="#/workday">Workday</a> lists one person's to-dos from every project, for planning a day. A <strong>Potential blocker</strong> label means the
             project is blocked, which may or may not hold up that to-do.
           </li>

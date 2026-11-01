@@ -15,7 +15,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import YAML from 'yaml';
 import { EventLog } from './events.js';
 
-export const RESERVED_KEYS = ['title', 'status', 'order', 'group', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
+export const RESERVED_KEYS = ['title', 'status', 'order', 'group', 'repo', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
 
 // The column for projects that are in production. Only projects here can be flagged as in maintenance.
 export const LIVE_STATUS = 'live';
@@ -113,6 +113,8 @@ export const IMAGE_TYPES = {
 };
 // A single file name (no folders), so an attachment path can never leave the attachments folder.
 const ATTACHMENT_RE = /^\w[\w .-]{0,119}\.(png|jpe?g|gif|webp|avif|bmp)$/i;
+// A to-do's linked issue is shown as a link, so only an address of this shape is ever kept.
+const ISSUE_RE = /^https:\/\/[\w.-]+\/[\w.-]+\/[\w.-]+\/issues\/[1-9]\d*$/;
 function assertId(id, what = 'id') {
   if (typeof id !== 'string' || !ID_RE.test(id)) throw new HttpError(400, `Invalid ${what}`);
   return id;
@@ -359,6 +361,7 @@ export class Store {
       status,
       // A group that has since been deleted reads as no group.
       group: ws.groups.some((g) => g.id === data.group) ? data.group : null,
+      repo: normalizeRepo(data.repo),
       order: Number(data.order) || 0,
       properties: props,
       latestUpdate: updates.length ? updates[updates.length - 1] : null,
@@ -453,6 +456,12 @@ export class Store {
         if (!patch.group) delete data.group;
         else if (!ws.groups.some((g) => g.id === patch.group)) throw new HttpError(400, 'Unknown group');
         else data.group = patch.group;
+      }
+      if (patch.repo !== undefined) {
+        const repo = normalizeRepo(patch.repo);
+        if (!patch.repo) delete data.repo;
+        else if (!repo) throw new HttpError(400, 'Enter a GitHub repository link, like https://github.com/owner/repo');
+        else data.repo = repo;
       }
       if (patch.blocked !== undefined) {
         if (patch.blocked) data.blocked = true;
@@ -643,6 +652,7 @@ function normalizeSubtasks(list) {
       // The id of the project's page written for this to-do. The link lives on the to-do, so it
       // follows the to-do through rewording and reordering, and a page with no to-do is a wiki page.
       if (typeof s.doc === 'string' && ID_RE.test(s.doc)) out.doc = s.doc;
+      if (typeof s.issue === 'string' && ISSUE_RE.test(s.issue)) out.issue = s.issue;
       return out;
     });
 }
@@ -650,6 +660,14 @@ function normalizeSubtasks(list) {
 // A linked page can go missing if its file is deleted by hand outside the app.
 function withoutMissingDocs(subtasks, pages) {
   return subtasks.map(({ doc, ...s }) => (pages.some((p) => p.id === doc) ? { ...s, doc } : s));
+}
+
+// A repository in one form, however it was copied: a browser link (even from deeper in the repo)
+// or a clone address. The host is left open for GitHub Enterprise. Null if it isn't a repository.
+export function normalizeRepo(value) {
+  const text = String(value ?? '').trim().replace(/^git@([^:]+):/, '$1/');
+  const m = /^(?:https?:\/\/)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:[/?#].*)?$/i.exec(text);
+  return m ? `https://${m[1].toLowerCase()}/${m[2]}/${m[3]}` : null;
 }
 
 // Hand-edited groups that can't be used (bad id, duplicate) are skipped rather than failing every request.
