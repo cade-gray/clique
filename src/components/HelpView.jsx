@@ -64,8 +64,8 @@ export default function HelpView({ workspace }) {
             <strong>Status updates</strong>: a dated record of decisions and progress. The latest one shows on the card.
           </li>
           <li>
-            A <strong>group</strong>: the team the solution belongs to. Groups and their people are set up under{' '}
-            <a href="#/settings">Configuration</a>; a project's group members are offered first when choosing owners.
+            One or more <strong>groups</strong>: the teams the solution belongs to. Groups and their people are set up under{' '}
+            <a href="#/settings">Configuration</a>; the members of a project's groups are offered first when choosing owners.
           </li>
           <li>
             <strong>Tasks</strong> (stories, in agile terms) with owners. Checked-off items move to a history section rather than disappearing.
@@ -93,7 +93,7 @@ export default function HelpView({ workspace }) {
             <strong>Columns</strong> to leave out detail management doesn't need.
           </li>
           <li>
-            <strong>+ Filter</strong> on the board and list narrows them down by group, person, status, flags or any property. The same filters apply to both views.
+            The <strong>perspective</strong> buttons above the board, list and stats show one group's projects, or all of them. <strong>+ Filter</strong> on the board and list narrows them down by group, person, status, flags or any property. The same filters apply to both views.
           </li>
           <li>
             <a href="#/stats">Stats</a> covers the whole board: how much is active and live, how long things take to go live, and what each group is

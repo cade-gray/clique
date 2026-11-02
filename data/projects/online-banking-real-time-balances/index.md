@@ -9,29 +9,26 @@ subtasks:
   - text: Expose a balance endpoint from the core gateway
     done: true
     owners:
-      - Alex
+      - Ronald
   - text: Cache with a 5 second TTL
     done: true
     owners:
-      - Priya
+      - Ronald
   - text: Pen test sign-off
     done: true
     owners:
-      - Sam
+      - Ronald
   - text: Security review of token scopes
     done: false
     owners:
-      - Alex
+      - Ronald
   - text: Cut over 10% of members
     done: false
     owners:
-      - Priya
-      - Sam
+      - Ronald
 priority: High
 owner:
-  - Priya
-  - Alex
-  - Sam
+  - Ronald
 due: 2026-10-30
 systems:
   - Online banking
@@ -44,11 +41,11 @@ updates:
   - id: c3d4e501
     text: Gateway endpoint is up in staging. p95 is 610 ms, under the 800 ms target.
     at: 2026-10-09T15:20:00.000Z
-    author: Alex
+    author: Ronald
   - id: c3d4e502
     text: Pen test passed. Waiting on the token scope review before we start the 10% rollout.
     at: 2026-10-14T17:45:00.000Z
-    author: Sam
+    author: Ronald
 ---
 
 ## Overview

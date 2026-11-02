@@ -9,19 +9,19 @@ subtasks:
   - text: Pick an identity verification vendor
     done: false
     owners:
-      - Sam
+      - Cade
   - text: Draft the data flow for compliance review
     done: false
     owners:
-      - Priya
+      - John
   - text: Create member in core and CRM from one event
     done: false
   - text: Handle failed verification and manual review
     done: false
 priority: Medium
 owner:
-  - Sam
-  - Priya
+  - Cade
+  - John
 due: 2027-01-29
 systems:
   - CRM
@@ -34,7 +34,7 @@ updates:
   - id: f6070801
     text: Compliance wants to review the data flow before we pick a vendor. Draft going to them next week.
     at: 2026-10-06T15:00:00.000Z
-    author: Priya
+    author: John
 ---
 
 ## Scope

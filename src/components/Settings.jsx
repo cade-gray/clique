@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { COLORS, TYPE_LABELS, Tag } from './props.jsx';
 
 // Keep in step with RESERVED_KEYS in server/store.js.
-const RESERVED = ['title', 'status', 'order', 'group', 'repo', 'repos', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
+const RESERVED = ['title', 'status', 'order', 'group', 'groups', 'repo', 'repos', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
 
 function slugify(s) {
   return (
@@ -97,8 +97,8 @@ export default function Settings({ workspace, onSaved }) {
       <section>
         <h3>Groups</h3>
         <p className="muted small">
-          Teams of people. Each project can belong to one group, and its members are offered first when choosing owners for the project and its
-          tasks. Removing a group leaves its projects without one.
+          Teams of people. A project can belong to several groups, and their members are offered first when choosing owners for the project and its
+          tasks. Each group gets a perspective on the board, list and stats. Removing a group takes it off its projects.
         </p>
         {groups.map((g, i) => (
           <div className="prop-def" key={keyOf(g, 'id')}>

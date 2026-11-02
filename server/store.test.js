@@ -434,7 +434,7 @@ test('a workspace with a done column is migrated to live + graveyard on start', 
   assert.equal((await store.getWorkspace()).columns.filter((c) => c.id === 'done').length, 1);
 });
 
-test('groups are saved with the workspace and projects can belong to one', async () => {
+test('groups are saved with the workspace and projects can belong to several', async () => {
   const store = await freshStore();
   const ws = await store.getWorkspace();
   assert.deepEqual(ws.groups, []);
@@ -447,18 +447,53 @@ test('groups are saved with the workspace and projects can belong to one', async
   await assert.rejects(store.saveWorkspace({ ...ws, groups: [{ id: 'a' }, { id: 'a' }] }), (e) => e.status === 400);
   await assert.rejects(store.saveWorkspace({ ...ws, groups: [{ id: '../x' }] }), (e) => e.status === 400);
 
-  const p = await store.createProject({ title: 'Grouped', group: 'integrations' });
-  assert.equal(p.group, 'integrations');
-  assert.equal((await store.createProject({ title: 'Loose' })).group, null);
-  await assert.rejects(store.createProject({ title: 'Bad', group: 'nope' }), (e) => e.status === 400);
-  await assert.rejects(store.updateProject(p.id, { group: 'nope' }), (e) => e.status === 400);
-  assert.equal((await store.updateProject(p.id, { group: '' })).group, null);
-  await store.updateProject(p.id, { group: 'integrations' });
+  const p = await store.createProject({ title: 'Grouped', groups: ['integrations'] });
+  assert.deepEqual(p.groups, ['integrations']);
+  assert.deepEqual((await store.createProject({ title: 'Loose' })).groups, []);
+  await assert.rejects(store.createProject({ title: 'Bad', groups: ['nope'] }), (e) => e.status === 400);
+  await assert.rejects(store.updateProject(p.id, { groups: ['integrations', 'nope'] }), (e) => e.status === 400);
+  assert.deepEqual((await store.updateProject(p.id, { groups: [] })).groups, []);
+  await store.updateProject(p.id, { groups: ['integrations'] });
 
   // Deleting the group leaves the project without one; the stale id in the file is ignored.
   await store.saveWorkspace({ ...ws, groups: [] });
-  assert.equal((await store.getProject(p.id)).group, null);
-  assert.equal((await store.listProjects()).find((x) => x.id === p.id).group, null);
+  assert.deepEqual((await store.getProject(p.id)).groups, []);
+  assert.deepEqual((await store.listProjects()).find((x) => x.id === p.id).groups, []);
+});
+
+test('a project can share several groups, and one saved with a single group still reads', async () => {
+  const store = await freshStore();
+  const ws = await store.getWorkspace();
+  await store.saveWorkspace({
+    ...ws,
+    groups: [
+      { id: 'core', name: 'Core', members: [] },
+      { id: 'cards', name: 'Cards', members: [] },
+    ],
+  });
+
+  const p = await store.createProject({ title: 'Shared', groups: ['cards', 'core', 'cards'] });
+  // Listed the way they're configured, however they were picked.
+  assert.deepEqual(p.groups, ['core', 'cards']);
+  assert.equal('group' in p, false);
+  assert.equal('groups' in p.properties, false);
+
+  const legacy = await store.createProject({ title: 'Legacy' });
+  const file = store.projectFile(legacy.id);
+  await fs.writeFile(file, (await fs.readFile(file, 'utf8')).replace('order:', 'group: core\norder:'));
+  assert.deepEqual((await store.getProject(legacy.id)).groups, ['core']);
+  assert.equal('group' in (await store.getProject(legacy.id)).properties, false);
+
+  // Changing the groups moves the file to `groups`; editing anything else leaves it be.
+  await store.updateProject(legacy.id, { title: 'Still legacy' });
+  assert.match(await fs.readFile(file, 'utf8'), /^group: core$/m);
+  await store.updateProject(legacy.id, { groups: ['core', 'cards'] });
+  const saved = await fs.readFile(file, 'utf8');
+  assert.doesNotMatch(saved, /^group:/m);
+  assert.deepEqual((await store.getProject(legacy.id)).groups, ['core', 'cards']);
+
+  assert.deepEqual((await store.updateProject(legacy.id, { groups: [] })).groups, []);
+  assert.doesNotMatch(await fs.readFile(file, 'utf8'), /^groups?:/m);
 });
 
 test('the event log records creates, column moves and deletes', async () => {

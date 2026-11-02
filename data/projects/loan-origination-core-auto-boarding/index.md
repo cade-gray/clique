@@ -9,20 +9,19 @@ subtasks:
   - text: Define the loan boarding payload
     done: true
     owners:
-      - Alex
+      - Jordan
   - text: Build the boarding service
     done: true
     owners:
-      - Alex
-      - Sam
+      - Jordan
   - text: Test against the vendor sandbox
     done: false
     owners:
-      - Sam
+      - Jordan
   - text: Reconcile funded amounts with the GL
     done: false
     owners:
-      - Priya
+      - Jordan
   - text: Train loan officers
     done: false
     owners:
@@ -31,8 +30,7 @@ blocked: true
 blockedReason: Vendor sandbox credentials expired; waiting on a renewed key from the vendor
 priority: High
 owner:
-  - Alex
-  - Sam
+  - Jordan
 due: 2026-12-04
 systems:
   - Loan origination
@@ -45,11 +43,11 @@ updates:
   - id: e5f60701
     text: Boarding service works end to end against our mock. Vendor sandbox is still needed for the real test.
     at: 2026-10-13T18:00:00.000Z
-    author: Alex
+    author: Jordan
   - id: e5f60702
     text: Sandbox key expired yesterday. Opened a ticket with the vendor and marked this blocked.
     at: 2026-10-15T20:30:00.000Z
-    author: Sam
+    author: Jordan
 ---
 
 ## Why

@@ -9,16 +9,16 @@ subtasks:
   - text: Open this project
     done: true
     owners:
-      - Alex
-      - Sam
+      - Cade
+      - John
   - text: Add a property under "Configuration"
     done: false
   - text: Drag this card to another column
     done: false
 priority: Medium
 owner:
-  - Alex
-  - Sam
+  - Cade
+  - John
 ---
 
 ## What is this?

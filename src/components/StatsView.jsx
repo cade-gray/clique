@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, LIVE_STATUS } from '../api.js';
 import { formatDate, formatDateTime, timeAgo } from './props.jsx';
+import Perspectives from './Perspectives.jsx';
 import { BarChart, ChartTable, ColumnChart, Legend, Meter, SERIES_SLOTS, StackedBar, StatTile, monthLabel, seriesColor } from './charts.jsx';
 
 const POLL_MS = 30000;
@@ -51,21 +52,32 @@ function useShowTasks() {
   return [show, update];
 }
 
-export default function StatsView({ workspace }) {
+export default function StatsView({ workspace, perspective, onPerspective }) {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
   const [showTasks, setShowTasks] = useShowTasks();
 
   useEffect(() => {
-    const load = () => api.stats().then((s) => { setStats(s); setError(null); }, setError);
+    // Switching perspective can leave an answer for the old one on its way back.
+    let current = true;
+    const load = () =>
+      api.stats(perspective).then(
+        (s) => {
+          if (!current) return;
+          setStats(s);
+          setError(null);
+        },
+        (e) => current && setError(e),
+      );
     load();
     const t = setInterval(() => document.visibilityState === 'visible' && load(), POLL_MS);
     window.addEventListener('focus', load);
     return () => {
+      current = false;
       clearInterval(t);
       window.removeEventListener('focus', load);
     };
-  }, []);
+  }, [perspective]);
 
   const series = useMemo(() => foldColumns(workspace.columns), [workspace.columns]);
 
@@ -75,6 +87,7 @@ export default function StatsView({ workspace }) {
   const liveName = workspace.columns.find((c) => c.id === LIVE_STATUS)?.name ?? 'Live';
   const targetName = stats.targetProperty?.name ?? '';
   const activity = showTasks ? stats.recentWithTasks : stats.recent;
+  const perspectiveName = workspace.groups.find((g) => g.id === perspective)?.name;
 
   const groupRows = stats.byGroup.map((g) => ({
     label: g.name,
@@ -95,12 +108,19 @@ export default function StatsView({ workspace }) {
         <span className="muted small">Updated {timeAgo(stats.generatedAt)}</span>
       </div>
 
+      <Perspectives groups={workspace.groups} value={perspective} onChange={onPerspective} />
+      {perspectiveName && (
+        <p className="muted small">
+          Only projects in {perspectiveName}, including any shared with another group. Their history is included, but projects that were deleted aren't.
+        </p>
+      )}
+
       {error && <div className="banner warn">Showing the last figures loaded — the server did not answer: {error.message}</div>}
 
       <h3 className="stats-heading">Portfolio</h3>
 
       <section className="tiles">
-        <StatTile label="Active projects" value={stats.totals.active} hint={`of ${stats.totals.projects} on the board`} />
+        <StatTile label="Active projects" value={stats.totals.active} hint={`of ${stats.totals.projects} ${perspectiveName ? `in ${perspectiveName}` : 'on the board'}`} />
         <StatTile label={liveName} value={stats.totals.live} hint={`${stats.totals.maintenance} in maintenance`} />
         <StatTile
           label={`Went ${liveName.toLowerCase()}, last 90 days`}
@@ -121,14 +141,14 @@ export default function StatsView({ workspace }) {
       <div className="stats-pair">
         <section>
           <h3>Where the work sits</h3>
-          <p className="muted small">Every project on the board, by column.</p>
+          <p className="muted small">Every project {perspectiveName ? `in ${perspectiveName}` : 'on the board'}, by column.</p>
           <BarChart rows={stats.byStatus.map((s) => ({ label: s.name, value: s.count }))} />
           <ChartTable head={['Column', 'Projects']} rows={stats.byStatus.map((s) => [s.name, s.count])} />
         </section>
 
         <section>
           <h3>Work per group</h3>
-          <p className="muted small">Bar length is the group's whole portfolio; the segments are the columns it sits in.</p>
+          <p className="muted small">Bar length is the group's whole portfolio; the segments are the columns it sits in. A project in two groups counts in both.</p>
           <Legend items={series.map((s, i) => ({ label: s.name, color: seriesColor(i) }))} />
           <StackedBar rows={groupRows} series={series} />
           <ChartTable
@@ -210,7 +230,7 @@ export default function StatsView({ workspace }) {
         <p className="muted small">
           Counted from the people properties on each project and the owners on its tasks. Retired projects are left out.
         </p>
-        <Meter done={stats.totals.tasks.done} total={stats.totals.tasks.total} label="Tasks across the board" />
+        <Meter done={stats.totals.tasks.done} total={stats.totals.tasks.total} label={perspectiveName ? `Tasks in ${perspectiveName}` : 'Tasks across the board'} />
         {stats.people.length === 0 ? (
           <p className="muted">No people are named on any project yet.</p>
         ) : (

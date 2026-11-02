@@ -38,13 +38,13 @@ api.post('/board/reorder', h((req) => store.reorderColumn(req.body.status, req.b
 // small files and a log measured in kilobytes, so there is nothing cached to go stale.
 api.get(
   '/stats',
-  h(async () => {
+  h(async (req) => {
     const [projects, workspace, events] = await Promise.all([
       store.listProjects({ withSubtasks: true }),
       store.getWorkspace(),
       store.events.read(),
     ]);
-    return computeStats({ projects, workspace, events });
+    return computeStats({ projects, workspace, events, group: req.query.group });
   }),
 );
 

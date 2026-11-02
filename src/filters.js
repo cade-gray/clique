@@ -50,7 +50,7 @@ export function filterFields(workspace, projects) {
       id: 'group',
       label: 'Group',
       options: [...workspace.groups.map((g) => ({ value: g.id, label: g.name })), { value: '', label: 'No group', empty: true }],
-      has: (p) => [p.group ?? ''],
+      has: (p) => (p.groups.length ? p.groups : ['']),
     });
   fields.push(
     {

@@ -4,6 +4,8 @@ import { describeFilters, filterFields, matches } from '../filters.js';
 import { usePhone } from '../usePhone.js';
 import FilterBar from './FilterBar.jsx';
 import { DEFAULT_VIEW, savedView } from './listView.js';
+import Perspectives from './Perspectives.jsx';
+import { groupNames, inPerspective } from './perspective.js';
 import Popover from './Popover.jsx';
 import { CardMeta, PropertyValue, Tag, formatDate, formatDateTime, isEmpty, timeAgo, toPeople } from './props.jsx';
 
@@ -57,8 +59,8 @@ function download(name, text) {
   URL.revokeObjectURL(url);
 }
 
-export default function ListView({ workspace, filters, onFilters }) {
-  const [projects, setProjects] = useState(null);
+export default function ListView({ workspace, filters, onFilters, perspective, onPerspective }) {
+  const [allProjects, setProjects] = useState(null);
   const [query, setQuery] = useState('');
   const [view, setView] = useListView();
   const [sort, setSort] = useState({ id: 'status', dir: 1 });
@@ -77,9 +79,11 @@ export default function ListView({ workspace, filters, onFilters }) {
     };
   }, []);
 
+  const projects = useMemo(() => allProjects?.filter((p) => inPerspective(p, perspective)) ?? null, [allProjects, perspective]);
+
   const statusIndex = (p) => workspace.columns.findIndex((c) => c.id === p.status);
   const statusName = (p) => workspace.columns.find((c) => c.id === p.status)?.name ?? '';
-  const groupName = (p) => workspace.groups.find((g) => g.id === p.group)?.name ?? '';
+  const groupName = (p) => groupNames(p, workspace.groups).join(', ');
   const progress = (p) => (p.subtasks.total ? p.subtasks.done / p.subtasks.total : null);
 
   const allColumns = useMemo(
@@ -185,11 +189,16 @@ export default function ListView({ workspace, filters, onFilters }) {
   if (!projects) return <div className="loading">Loading…</div>;
 
   const blockedCount = projects.filter((p) => p.blocked).length;
+  const perspectiveBar = <Perspectives groups={workspace.groups} value={perspective} onChange={onPerspective} />;
+  const perspectiveName = workspace.groups.find((g) => g.id === perspective)?.name;
+  // The printed report has no perspective buttons, so it says what it covers.
+  const reportScope = [perspectiveName && `Group: ${perspectiveName}`, describeFilters(filters, fields)].filter(Boolean).join(' · ');
 
   if (phone) {
     return (
       <div className="list-wrap phone-list">
         <div className="phone-list-tools">
+          {perspectiveBar}
           <input className="search" type="search" aria-label="Search projects" placeholder="Search…" value={query} onChange={(e) => setQuery(e.target.value)} />
           <FilterBar fields={fields} projects={projects} filters={filters} onChange={onFilters} />
           <div className="phone-list-sort">
@@ -225,6 +234,7 @@ export default function ListView({ workspace, filters, onFilters }) {
 
   return (
     <div className="list-wrap">
+      {perspectiveBar}
       <div className="board-toolbar list-toolbar">
         <input className="search" placeholder="Search…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <FilterBar fields={fields} projects={projects} filters={filters} onChange={onFilters} />
@@ -278,7 +288,7 @@ export default function ListView({ workspace, filters, onFilters }) {
           Export CSV
         </button>
       </div>
-      {describeFilters(filters, fields) && <p className="muted small print-only print-filters">Filtered to {describeFilters(filters, fields)}</p>}
+      {reportScope && <p className="muted small print-only print-filters">Filtered to {reportScope}</p>}
       <div className="list-scroll">
         <table className="list">
           <thead>

@@ -9,28 +9,26 @@ subtasks:
   - text: Map core alert codes to ITSM categories
     done: true
     owners:
-      - Priya
+      - Ronald
   - text: Build the webhook receiver
     done: true
     owners:
-      - Alex
+      - Ronald
   - text: Auto-close incidents when the batch recovers
     done: true
     owners:
-      - Alex
-      - Priya
+      - Ronald
   - text: Write the on-call runbook
     done: true
     owners:
-      - Jordan
+      - Ronald
   - text: Load test with 500 alerts
     done: true
     owners:
-      - Sam
+      - Ronald
 priority: High
 owner:
-  - Alex
-  - Priya
+  - Ronald
 due: 2026-08-14
 systems:
   - ITSM
@@ -43,11 +41,11 @@ updates:
   - id: a1b2c301
     text: "Load test passed: 500 alerts in 4 minutes with no duplicate incidents."
     at: 2026-08-10T14:05:00.000Z
-    author: Priya
+    author: Ronald
   - id: a1b2c302
     text: Live in production. Watching the first batch window tonight; on-call has the runbook.
     at: 2026-08-14T16:30:00.000Z
-    author: Alex
+    author: Ronald
 ---
 
 ## What it does

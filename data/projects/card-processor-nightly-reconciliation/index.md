@@ -9,23 +9,23 @@ subtasks:
   - text: Pull the settlement file over SFTP
     done: true
     owners:
-      - Jordan
+      - Mason
   - text: Match transactions to core postings
     done: true
     owners:
-      - Jordan
-      - Alex
+      - Mason
+      - Jacob
   - text: Exception report emailed to Accounting
     done: true
     owners:
-      - Jordan
+      - Mason
   - text: Alert when the file is late
     done: true
     owners:
-      - Priya
+      - Jacob
 priority: Medium
 owner:
-  - Jordan
+  - Mason
 due: 2026-07-31
 systems:
   - Card processor
@@ -39,7 +39,7 @@ updates:
   - id: b2c3d401
     text: Shipped. First exception report went to Accounting with 3 items, all explained.
     at: 2026-07-31T13:00:00.000Z
-    author: Jordan
+    author: Mason
 ---
 
 ## Schedule
