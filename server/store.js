@@ -17,6 +17,10 @@ import { EventLog, taskChanges } from './events.js';
 
 // `maintenance` is derived from the open tasks and never written, but it stays reserved so the
 // leftover key in a file saved by an older version doesn't show up as a custom property.
+// Task summaries travel in the address of a calendar or GitHub link, which can only be so long.
+// Keep in step with SUMMARY_MAX in src/api.js.
+const SUMMARY_MAX = 2000;
+
 export const RESERVED_KEYS = ['title', 'status', 'order', 'group', 'groups', 'repo', 'repos', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
 
 // The column for projects that are in production. Only projects here can be in maintenance.
@@ -605,7 +609,7 @@ export class Store {
 
   async getPage(id, page) {
     const doc = await this.readDoc(this.pageFile(id, page));
-    return { id: page, projectId: id, title: doc.data.title || page, body: doc.body, version: doc.version };
+    return { id: page, projectId: id, title: doc.data.title || page, summary: String(doc.data.summary ?? ''), body: doc.body, version: doc.version };
   }
 
   async createPage(id, { title }) {
@@ -633,6 +637,11 @@ export class Store {
       }
       const data = { ...doc.data };
       if (patch.title !== undefined) data.title = String(patch.title).trim() || 'Untitled page';
+      if (patch.summary !== undefined) {
+        const summary = String(patch.summary ?? '').replace(/\r\n/g, '\n').trim().slice(0, SUMMARY_MAX);
+        if (summary) data.summary = summary;
+        else delete data.summary;
+      }
       data.updated = now();
       await writeFileAtomic(file, stringifyMarkdown(data, patch.body ?? doc.body));
     });

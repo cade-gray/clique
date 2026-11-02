@@ -7,7 +7,7 @@ import ScheduleButton from './ScheduleButton.jsx';
 import { moveToSlot, movesNowhere, slotAt } from './tasks.js';
 import { useTouchDrag } from './useTouchDrag.js';
 
-export default function Subtasks({ items, pages, base, repos, projectTitle, onChange, onAddDoc, onOpenDoc }) {
+export default function Subtasks({ items, pages, base, repos, projectId, projectTitle, onChange, onAddDoc, onOpenDoc }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [slot, setSlot] = useState(null);
   const listRef = useRef(null);
@@ -128,13 +128,13 @@ export default function Subtasks({ items, pages, base, repos, projectTitle, onCh
                 />
               </div>
               <div className="subtask-actions">
-                <ScheduleButton text={s.text} owners={s.owners} projectTitle={projectTitle} />
+                <ScheduleButton text={s.text} projectId={projectId} doc={s.doc} projectTitle={projectTitle} />
                 {s.doc ? (
                   <TaskDoc page={docOf(s, pages)} base={base} onOpen={onOpenDoc} />
                 ) : (
                   <AddNotes onClick={() => onAddDoc(i)} />
                 )}
-                <TaskIssue issue={s.issue} repos={repos} text={s.text} owners={s.owners} projectTitle={projectTitle} onChange={(issue) => update(i, { issue })} />
+                <TaskIssue issue={s.issue} repos={repos} text={s.text} projectId={projectId} doc={s.doc} onChange={(issue) => update(i, { issue })} />
               </div>
             </div>
             <button className="icon" onClick={() => remove(i)} title="Delete subtask">

@@ -316,6 +316,11 @@ table.list .col-title a:hover { text-decoration: underline; }
 .doc { flex: 1; min-width: 0; max-width: 900px; margin: 0 auto; padding: 32px 48px 80px; background: var(--panel); }
 .doc-title { width: 100%; font-size: 34px; font-weight: 700; border: none; outline: none; padding: 4px 0; margin-bottom: 12px; background: transparent; }
 .page-task { margin: -6px 0 12px; color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.task-summary { margin-bottom: 16px; }
+.task-summary label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 600; }
+.task-summary .prop-textarea { display: block; width: 100%; max-width: none; box-sizing: border-box; }
+.task-summary p { margin: 4px 0 0; }
+.task-summary-error { color: var(--danger); }
 
 .props { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
 .prop-row { display: flex; align-items: center; gap: 12px; min-height: 32px; }

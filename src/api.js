@@ -25,6 +25,9 @@ export const LIVE_STATUS = 'live';
 // Keep in step with GRAVEYARD_STATUS there too: the column for retired projects.
 export const GRAVEYARD_STATUS = 'graveyard';
 
+// Keep in step with SUMMARY_MAX there too: task summaries go out in calendar and GitHub links.
+export const SUMMARY_MAX = 2000;
+
 export const api = {
   workspace: () => request('GET', 'workspace'),
   saveWorkspace: (ws) => request('PUT', 'workspace', ws),

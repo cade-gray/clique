@@ -1,12 +1,10 @@
 // Linking tasks to GitHub issues. Clique holds no GitHub login: a new issue is written on GitHub
 // itself under the person's own account, from a pre-filled form, and its link is pasted back here.
 
-// GitHub's new-issue form with the task filled in.
-export function newIssueUrl(repo, { text, owners = [], projectTitle, url }) {
-  const lines = [`Task on ${projectTitle}.`];
-  if (owners.length) lines.push(`Owner${owners.length > 1 ? 's' : ''}: ${owners.join(', ')}`);
-  lines.push('', `[Open in Clique](${url})`);
-  return `${repo}/issues/new?title=${encodeURIComponent(text)}&body=${encodeURIComponent(lines.join('\n'))}`;
+// GitHub's new-issue form with the task filled in: its summary, if it has one, and a link back.
+export function newIssueUrl(repo, { text, summary = '', url }) {
+  const body = [summary, `[Open in Clique](${url})`].filter(Boolean).join('\n\n');
+  return `${repo}/issues/new?title=${encodeURIComponent(text)}&body=${encodeURIComponent(body)}`;
 }
 
 // owner/name, the way GitHub writes a repository.

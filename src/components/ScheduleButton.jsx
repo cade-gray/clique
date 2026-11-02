@@ -1,14 +1,15 @@
 import { useRef, useState } from 'react';
 import Popover from './Popover.jsx';
 import { downloadIcs, formatSlot, googleUrl, icsFilename, icsText, outlookUrl, subtaskEvent } from './calendar.js';
-import { toPeople } from './props.jsx';
+import { useTaskSummary } from './TaskLinks.jsx';
 
 // Books time to work on a task. Clique hands the event to a calendar and keeps nothing: there is
 // no way for it to know whether the block was kept, moved or deleted afterwards. `url` is the link
 // the event carries back to Clique, and defaults to the page it was booked from.
-export default function ScheduleButton({ text, owners, projectTitle, url = window.location.href }) {
+export default function ScheduleButton({ text, projectId, doc, projectTitle, url = window.location.href }) {
   const [open, setOpen] = useState(false);
   const anchor = useRef(null);
+  const summary = useTaskSummary(projectId, doc, open);
   return (
     <span className="schedule">
       <button
@@ -20,10 +21,10 @@ export default function ScheduleButton({ text, owners, projectTitle, url = windo
       >
         📅 Schedule
       </button>
-      {open && (
+      {open && summary !== null && (
         <ScheduleMenu
           anchor={anchor}
-          event={subtaskEvent({ text, owners: toPeople(owners), projectTitle, url })}
+          event={subtaskEvent({ text, summary, projectTitle, url })}
           filename={icsFilename(text)}
           onClose={() => setOpen(false)}
         />

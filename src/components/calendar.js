@@ -15,12 +15,10 @@ export function defaultStart(now = new Date()) {
 }
 
 // The event itself, in the one shape both calendars are built from.
-export function subtaskEvent({ text, owners = [], projectTitle, url, start = defaultStart(), minutes = BLOCK_MINUTES }) {
-  const lines = [`Task on ${projectTitle}.`];
-  if (owners.length) lines.push(`Owner${owners.length > 1 ? 's' : ''}: ${owners.join(', ')}`);
+export function subtaskEvent({ text, summary = '', projectTitle, url, start = defaultStart(), minutes = BLOCK_MINUTES }) {
   return {
     title: `${text} — ${projectTitle}`,
-    description: lines.join('\n'),
+    description: summary,
     url,
     start,
     end: new Date(start.getTime() + minutes * 60000),
@@ -38,10 +36,14 @@ export function formatSlot(start, end) {
 
 const GOOGLE_COMPOSE = 'https://calendar.google.com/calendar/render';
 
+// A task without a summary has only the link, and either can be missing.
+function plainBody(ev) {
+  return [ev.description, ev.url].filter(Boolean).join('\n');
+}
+
 export function googleUrl(ev) {
   const stamp = (d) => utcStamp(d).replace(/[-:]/g, '');
-  const details = ev.url ? `${ev.description}\n${ev.url}` : ev.description;
-  const query = new URLSearchParams({ action: 'TEMPLATE', text: ev.title, dates: `${stamp(ev.start)}/${stamp(ev.end)}`, details });
+  const query = new URLSearchParams({ action: 'TEMPLATE', text: ev.title, dates: `${stamp(ev.start)}/${stamp(ev.end)}`, details: plainBody(ev) });
   return `${GOOGLE_COMPOSE}?${query}`;
 }
 
@@ -69,9 +71,8 @@ export function outlookUrl(ev) {
 // The compose form renders its body as HTML, so the link back to the project is clickable.
 function outlookBody(ev) {
   const html = escapeHtml(ev.description).replace(/\n/g, '<br>');
-  if (!ev.url) return html;
-  const href = escapeHtml(ev.url);
-  return `${html}<br><a href="${href}">${href}</a>`;
+  const href = ev.url && escapeHtml(ev.url);
+  return [html, href && `<a href="${href}">${href}</a>`].filter(Boolean).join('<br>');
 }
 
 function escapeHtml(s) {
@@ -85,7 +86,6 @@ function utcStamp(d) {
 // ---------- .ics file ----------
 
 export function icsText(ev, { now = new Date(), uid = newUid() } = {}) {
-  const description = ev.url ? `${ev.description}\n${ev.url}` : ev.description;
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -98,7 +98,7 @@ export function icsText(ev, { now = new Date(), uid = newUid() } = {}) {
     `DTSTART:${icsTime(ev.start)}`,
     `DTEND:${icsTime(ev.end)}`,
     `SUMMARY:${icsEscape(ev.title)}`,
-    `DESCRIPTION:${icsEscape(description)}`,
+    `DESCRIPTION:${icsEscape(plainBody(ev))}`,
     ...(ev.url ? [`URL:${icsEscape(ev.url)}`] : []),
     'END:VEVENT',
     'END:VCALENDAR',
