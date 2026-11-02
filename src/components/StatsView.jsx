@@ -184,9 +184,9 @@ export default function StatsView({ workspace }) {
       <section>
         <h3>Who is carrying what</h3>
         <p className="muted small">
-          Counted from the people properties on each project and the owners on its to-dos. Retired projects are left out.
+          Counted from the people properties on each project and the owners on its tasks. Retired projects are left out.
         </p>
-        <Meter done={stats.totals.todos.done} total={stats.totals.todos.total} label="To-dos across the board" />
+        <Meter done={stats.totals.todos.done} total={stats.totals.todos.total} label="Tasks across the board" />
         {stats.people.length === 0 ? (
           <p className="muted">No people are named on any project yet.</p>
         ) : (
@@ -197,7 +197,7 @@ export default function StatsView({ workspace }) {
                 <th>Groups</th>
                 <th className="num">Active</th>
                 <th className="num">{liveName}</th>
-                <th className="num">Open to-dos</th>
+                <th className="num">Open tasks</th>
               </tr>
             </thead>
             <tbody>

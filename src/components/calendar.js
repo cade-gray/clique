@@ -16,7 +16,7 @@ export function defaultStart(now = new Date()) {
 
 // The event itself, in the one shape both calendars are built from.
 export function subtaskEvent({ text, owners = [], projectTitle, url, start = defaultStart(), minutes = BLOCK_MINUTES }) {
-  const lines = [`To-do on ${projectTitle}.`];
+  const lines = [`Task on ${projectTitle}.`];
   if (owners.length) lines.push(`Owner${owners.length > 1 ? 's' : ''}: ${owners.join(', ')}`);
   return {
     title: `${text} — ${projectTitle}`,
@@ -144,7 +144,7 @@ function newUid() {
 
 export function icsFilename(text) {
   const slug = String(text).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
-  return `${slug || 'to-do'}.ics`;
+  return `${slug || 'task'}.ics`;
 }
 
 export function downloadIcs(name, text) {

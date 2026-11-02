@@ -5,10 +5,10 @@ import { LIVE_STATUS } from '../api.js';
 // names; columns a team adds itself are listed without a description.
 const STAGES = {
   backlog: 'Requests and ideas: what is wanted, by whom, and why.',
-  'in-progress': 'The working space while it is built: to-dos with owners, design notes, field mappings, open questions and status updates.',
+  'in-progress': 'The working space while it is built: tasks with owners, design notes, field mappings, open questions and status updates.',
   review: 'Testing, sign-off and go-live preparation.',
   [LIVE_STATUS]:
-    'In production. The page becomes the solution’s wiki: what it does, how it works, the systems it touches, runbooks and support notes. A to-do added here puts the project into maintenance until it is checked off.',
+    'In production. The page becomes the solution’s wiki: what it does, how it works, the systems it touches, runbooks and support notes. A task added here puts the project into maintenance until it is checked off.',
   graveyard: 'Retired. Nothing is deleted, so the history and documentation are still there if someone asks how it used to work, or it comes back.',
 };
 
@@ -58,7 +58,7 @@ export default function HelpView({ workspace }) {
           <li>
             <strong>Pages</strong>: an overview plus as many sub-pages as needed (design, field mapping, runbook, meeting notes). Type <code>/</code> for
             headings, tables, code blocks and more; paste screenshots straight in. General pages sit under <strong>Wiki</strong>; a page written for one
-            to-do sits under <strong>To-do notes</strong>.
+            task sits under <strong>Task notes</strong>.
           </li>
           <li>
             <strong>Status updates</strong>: a dated record of decisions and progress. The latest one shows on the card.
@@ -68,11 +68,11 @@ export default function HelpView({ workspace }) {
             <a href="#/settings">Configuration</a>; a project's group members are offered first when choosing owners.
           </li>
           <li>
-            <strong>To-dos</strong> with owners. Checked-off items move to a history section rather than disappearing.
+            <strong>Tasks</strong> (stories, in agile terms) with owners. Checked-off items move to a history section rather than disappearing.
           </li>
           <li>
             <strong>Blocked</strong> (red outline), set by hand with a reason, and <strong>Maintenance</strong> (yellow outline), which a Live project
-            goes into on its own while it has an open to-do.
+            goes into on its own while it has an open task.
           </li>
         </ul>
       </section>
@@ -81,12 +81,12 @@ export default function HelpView({ workspace }) {
         <h3>Good to know</h3>
         <ul>
           <li>
-            Give a project one or more <strong>GitHub repos</strong> and its to-dos can create or link an issue there. New issues are written on GitHub under your own
-            account; paste the link back into the to-do.
+            Give a project one or more <strong>GitHub repos</strong> and its tasks can create or link an issue there. New issues are written on GitHub under your own
+            account; paste the link back into the task.
           </li>
           <li>
-            <a href="#/workday">Workday</a> lists one person's to-dos from every project, for planning a day, with the same schedule, notes and issue buttons as the project page. A{' '}
-            <strong>Potential blocker</strong> label means the project is blocked, which may or may not hold up that to-do.
+            <a href="#/workday">Workday</a> lists one person's tasks from every project, for planning a day, with the same schedule, notes and issue buttons as the project page. A{' '}
+            <strong>Potential blocker</strong> label means the project is blocked, which may or may not hold up that task.
           </li>
           <li>
             <a href="#/list">List view</a> gives a sortable table of every project, with CSV export and a print layout for reports and audits. Use{' '}

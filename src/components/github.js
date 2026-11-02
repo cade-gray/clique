@@ -3,7 +3,7 @@
 
 // GitHub's new-issue form with the to-do filled in.
 export function newIssueUrl(repo, { text, owners = [], projectTitle, url }) {
-  const lines = [`To-do on ${projectTitle}.`];
+  const lines = [`Task on ${projectTitle}.`];
   if (owners.length) lines.push(`Owner${owners.length > 1 ? 's' : ''}: ${owners.join(', ')}`);
   lines.push('', `[Open in Clique](${url})`);
   return `${repo}/issues/new?title=${encodeURIComponent(text)}&body=${encodeURIComponent(lines.join('\n'))}`;

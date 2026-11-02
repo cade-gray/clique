@@ -98,7 +98,7 @@ export default function Settings({ workspace, onSaved }) {
         <h3>Groups</h3>
         <p className="muted small">
           Teams of people. Each project can belong to one group, and its members are offered first when choosing owners for the project and its
-          to-dos. Removing a group leaves its projects without one.
+          tasks. Removing a group leaves its projects without one.
         </p>
         {groups.map((g, i) => (
           <div className="prop-def" key={keyOf(g, 'id')}>

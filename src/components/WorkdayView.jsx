@@ -60,7 +60,7 @@ export default function WorkdayView({ workspace, person }) {
     try {
       const { subtasks } = await api.project(todo.project.id);
       const index = findTodo(subtasks, todo.text);
-      if (index < 0) throw new Error('This to-do has changed, or another has the same text. Refresh, or use the project page.');
+      if (index < 0) throw new Error('This task has changed, or another has the same text. Refresh, or use the project page.');
       await apply(subtasks, index);
     } catch (e) {
       setFailed({ key: todo.key, message: e.message });
@@ -97,7 +97,7 @@ export default function WorkdayView({ workspace, person }) {
     navigate(name ? `#/workday/${encodeURIComponent(name)}` : '#/workday');
   }
 
-  if (error && !projects) return <div className="banner error">Could not load the to-dos: {error.message}</div>;
+  if (error && !projects) return <div className="banner error">Could not load the tasks: {error.message}</div>;
   if (!projects) return <div className="loading">Loading…</div>;
 
   const people = workdayPeople(workspace, projects);
@@ -121,13 +121,13 @@ export default function WorkdayView({ workspace, person }) {
         </select>
         {current && (
           <span className="muted small">
-            {plural(open.length, 'open to-do')} across {plural(projectCount, 'project')}
+            {plural(open.length, 'open task')} across {plural(projectCount, 'project')}
           </span>
         )}
       </div>
 
-      {!current && <p className="muted">Pick a person to see their to-dos from every project.</p>}
-      {current && open.length === 0 && <p className="muted">{current} has no open to-dos.</p>}
+      {!current && <p className="muted">Pick a person to see their tasks from every project.</p>}
+      {current && open.length === 0 && <p className="muted">{current} has no open tasks.</p>}
 
       {open.length > 0 && (
         <ul className="workday-list">

@@ -382,7 +382,7 @@ test('a live project with open to-dos is in maintenance, and says which ones', a
 
   // More than one, and the count is the reason instead.
   got = await store.updateProject(p.id, { subtasks: [{ text: 'Refund webhook retries' }, { text: 'Rotate the API key' }] });
-  assert.deepEqual([got.maintenance, got.maintenanceReason], [true, '2 to-dos open']);
+  assert.deepEqual([got.maintenance, got.maintenanceReason], [true, '2 tasks open']);
 
   // A checked-off to-do doesn't count, so the last one takes the project back out.
   got = await store.updateProject(p.id, { subtasks: [{ text: 'Refund webhook retries', done: true }, { text: 'Rotate the API key' }] });

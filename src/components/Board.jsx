@@ -251,7 +251,7 @@ function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd
           </div>
         )}
         {subtasks.total > 0 && (
-          <div className="card-progress" title={`${subtasks.done} of ${subtasks.total} to-dos done`}>
+          <div className="card-progress" title={`${subtasks.done} of ${subtasks.total} tasks done`}>
             <div className="bar">
               <div style={{ width: `${(subtasks.done / subtasks.total) * 100}%` }} />
             </div>

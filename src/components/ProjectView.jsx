@@ -138,7 +138,7 @@ export default function ProjectView({ id, pageId, workspace }) {
         </button>
         {todoDocs.length > 0 && (
           <nav className="pages">
-            <div className="pages-heading">To-do notes</div>
+            <div className="pages-heading">Task notes</div>
             {todoDocs.map((p) => (
               <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} className={pageId === p.id ? 'active' : ''} title={todoOf(p.id, project.subtasks).text}>
                 📝 {p.title}
@@ -244,7 +244,7 @@ function ProjectProps({ project, workspace, patch }) {
               🔧 In maintenance{project.maintenanceReason && <span className="muted"> — {project.maintenanceReason}</span>}
             </span>
           ) : (
-            <span className="muted maintenance-off">Not in maintenance. A live project with an open to-do goes into maintenance by itself.</span>
+            <span className="muted maintenance-off">Not in maintenance. A live project with an open task goes into maintenance by itself.</span>
           )}
         </div>
       )}
@@ -311,7 +311,7 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
   const doneCount = project.subtasks.filter((s) => s.done).length;
   const { wiki, todoDocs } = splitPages(project.pages, project.subtasks);
   const tabs = [
-    ['todos', project.subtasks.length ? `To-dos ${doneCount}/${project.subtasks.length}` : 'To-dos'],
+    ['todos', project.subtasks.length ? `Tasks ${doneCount}/${project.subtasks.length}` : 'Tasks'],
     ['updates', 'Updates'],
     ['docs', 'Docs'],
     ['details', 'Details'],
@@ -402,8 +402,8 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
               </button>
             </nav>
             {todoDocs.length > 0 && (
-              <nav className="page-chips" aria-label="To-do notes">
-                <span className="page-chips-label">To-do notes</span>
+              <nav className="page-chips" aria-label="Task notes">
+                <span className="page-chips-label">Task notes</span>
                 {todoDocs.map((p) => (
                   <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} className={pageId === p.id ? 'active' : ''}>
                     {p.title}
@@ -501,7 +501,7 @@ function PageView({ projectId, pageId, todo, onChanged, onOpenTodo, phone = fals
       <TitleInput multiline={phone} value={page.title} onCommit={rename} />
       {todo && (
         <div className="page-todo">
-          To-do:{' '}
+          Task · story:{' '}
           <a href={`#/p/${encodeURIComponent(projectId)}`} onClick={onOpenTodo}>
             {todo.text}
           </a>

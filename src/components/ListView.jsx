@@ -112,7 +112,7 @@ export default function ListView({ workspace, filters, onFilters }) {
       })),
       {
         id: 'subtasks',
-        label: 'To-dos',
+        label: 'Tasks',
         sort: progress,
         text: (p) => (p.subtasks.total ? `${p.subtasks.done}/${p.subtasks.total}` : ''),
       },
@@ -153,10 +153,10 @@ export default function ListView({ workspace, filters, onFilters }) {
     for (const c of columns) {
       header.push(c.label);
       if (c.reason) header.push(c.reasonLabel);
-      if (c.id === 'subtasks') header.push('To-dos done', 'To-dos total', 'Progress');
+      if (c.id === 'subtasks') header.push('Tasks done', 'Tasks total', 'Progress');
       if (c.extra) header.push('Latest update by', 'Latest update date');
     }
-    if (view.todos) header.push('To-do', 'To-do status', ...(view.todoOwners ? ['To-do owners'] : []));
+    if (view.todos) header.push('Task', 'Task status', ...(view.todoOwners ? ['Task owners'] : []));
     const lines = [header.map((h) => csvCell(h, false))];
     for (const p of rows) {
       const cells = [];
@@ -252,18 +252,18 @@ export default function ListView({ workspace, filters, onFilters }) {
                   {c.label}
                 </label>
               ))}
-              <div className="popover-label">To-dos</div>
+              <div className="popover-label">Tasks</div>
               <label className="popover-item check">
                 <input type="checkbox" checked={view.todos} onChange={(e) => setView({ todos: e.target.checked })} />
-                List to-dos under each project
+                List tasks under each project
               </label>
               <label className={`popover-item check ${view.todos ? '' : 'muted'}`}>
                 <input type="checkbox" disabled={!view.todos} checked={view.doneTodos} onChange={(e) => setView({ doneTodos: e.target.checked })} />
-                Include finished to-dos
+                Include finished tasks
               </label>
               <label className={`popover-item check ${view.todos ? '' : 'muted'}`}>
                 <input type="checkbox" disabled={!view.todos} checked={view.todoOwners} onChange={(e) => setView({ todoOwners: e.target.checked })} />
-                Show to-do owners
+                Show task owners
               </label>
               <div className="popover-foot">
                 <button className="link" onClick={() => setView(DEFAULT_VIEW)}>
