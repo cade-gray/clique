@@ -303,7 +303,7 @@ function RepoList({ repos, onChange }) {
 
 function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta, onPagesChanged, onAddPage, onAddTaskDoc, onDelete }) {
   const id = project.id;
-  const [tab, setTab] = useState(pageId || project.status === LIVE_STATUS ? 'docs' : 'tasks');
+  const [tab, setTab] = useState(pageId ? 'docs' : 'tasks');
   // The docs stay mounted once opened, so their editor keeps its unsaved text and version
   // while another tab is showing.
   const [docsOpened, setDocsOpened] = useState(tab === 'docs');
