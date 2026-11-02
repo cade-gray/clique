@@ -9,7 +9,7 @@ subtasks:
   - text: Inventory the fields needed for the quarterly call report
     done: false
     owners:
-      - Jordan
+      - John
   - text: Set up change data capture on core
     done: false
   - text: Build and validate the extract
@@ -18,7 +18,7 @@ subtasks:
     done: false
 priority: Low
 owner:
-  - Jordan
+  - John
 due: 2027-03-12
 systems:
   - Data warehouse

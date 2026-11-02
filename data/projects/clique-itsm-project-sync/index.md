@@ -9,26 +9,26 @@ subtasks:
   - text: Store the ITSM change number on the project
     done: true
     owners:
-      - Sam
+      - Cade
   - text: Poll ITSM for change status every 5 minutes
     done: true
     owners:
-      - Sam
+      - Cade
   - text: Move the card to Done when the change is closed
     done: false
     owners:
-      - Sam
-      - Jordan
+      - Cade
+      - John
   - text: Show approval state on the card
     done: false
     owners:
-      - Jordan
+      - John
   - text: Handle ITSM maintenance windows
     done: false
 priority: Medium
 owner:
-  - Sam
-  - Jordan
+  - Cade
+  - John
 due: 2026-11-20
 systems:
   - Clique
@@ -40,11 +40,11 @@ updates:
   - id: d4e5f601
     text: Change numbers now saved on projects and polled every 5 minutes.
     at: 2026-10-12T14:10:00.000Z
-    author: Sam
+    author: Cade
   - id: d4e5f602
     text: "Next up: moving the card to Done when the change closes. Need to agree rate limits with the ITSM admins."
     at: 2026-10-15T19:00:00.000Z
-    author: Jordan
+    author: John
 ---
 
 ## Goal
