@@ -271,6 +271,15 @@ Notes:
 - Importing the same plan twice creates the projects again (with `-2` added to their ids), so delete the first set or leave the buckets you've already imported out.
 - Columns are matched by their header names, not their positions, so exports from both the classic and the new Planner work.
 
+## Version
+
+The current version is **2.0.0**. There's no migration step to run from 1.x, but these changes matter if you rely on the old behavior:
+
+- **Project files:** projects now store a `groups` list. A file with a single `group` still reads, and moves to `groups` the next time its groups change.
+- **Rolling back:** 1.x doesn't read `groups`, so a project that has moved shows as having no group until you restore its `group`.
+- **API:** creating or updating a project takes `groups` instead of `group`, and project responses return `groups`.
+- **Events and issues:** scheduling a task or creating an issue from it now uses the summary on its notes page, and no longer adds the "Task on" and owner lines.
+
 ## Deploying
 
 ### Before you deploy anywhere
