@@ -243,7 +243,7 @@ export class Store {
         '## What is this?',
         '',
         'Each card on the board is a folder of **markdown files** on the server. This overview is `index.md`;',
-        'pages you add in the sidebar are sibling `.md` files. Properties and to-dos live in the frontmatter.',
+        'pages you add in the sidebar are sibling `.md` files. Properties and tasks live in the frontmatter.',
         '',
         'Type `/` on an empty line for headings, lists, tables, and code blocks.',
         '',
@@ -377,7 +377,7 @@ export class Store {
       maintenance,
       // The one open to-do is the reason; past that, the count is, because a list of them
       // wouldn't fit on a card.
-      maintenanceReason: !maintenance ? '' : open.length === 1 ? open[0].text : `${open.length} to-dos open`,
+      maintenanceReason: !maintenance ? '' : open.length === 1 ? open[0].text : `${open.length} tasks open`,
       // Everyone who owns a to-do, so views can filter by person without loading every to-do.
       subtasks: { done: subtasks.filter((s) => s.done).length, total: subtasks.length, owners: normalizePeople(subtasks.flatMap((s) => s.owners ?? [])) },
       created: data.created ?? null,

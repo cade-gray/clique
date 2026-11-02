@@ -7,7 +7,7 @@ import { toPeople } from './props.jsx';
 
 export function AddNotes({ onClick }) {
   return (
-    <button className="add-doc" onClick={onClick} title="Write notes for this to-do">
+    <button className="add-doc" onClick={onClick} title="Write notes for this task">
       📝 Add notes
     </button>
   );

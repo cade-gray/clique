@@ -64,7 +64,7 @@ export default function Subtasks({ items, pages, base, repos, projectTitle, onCh
       }}
     >
       <h3>
-        To-dos{' '}
+        Tasks{' '}
         {items.length > 0 && (
           <span className="muted small">
             {history.length}/{items.length}
@@ -154,7 +154,7 @@ export default function Subtasks({ items, pages, base, repos, projectTitle, onCh
                   type="checkbox"
                   checked
                   onChange={() => setDone(i, false)}
-                  title="Uncheck to move back to to-dos"
+                  title="Uncheck to move back to tasks"
                 />
                 <div className="subtask-main">
                   <span className="subtask-text">{s.text}</span>
@@ -207,8 +207,8 @@ function NewTodo({ onAdd }) {
         ref={box}
         rows={1}
         value={text}
-        placeholder="Add a to-do"
-        aria-label="Add a to-do"
+        placeholder="Add a task"
+        aria-label="Add a task"
         enterKeyHint="done"
         onChange={(e) => setText(e.target.value.replace(/\s*\n\s*/g, ' '))}
         onKeyDown={(e) => {

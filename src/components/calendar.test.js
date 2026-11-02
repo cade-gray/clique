@@ -23,7 +23,7 @@ test('a block defaults to an hour at 9am tomorrow, local time', () => {
 test('the event names the to-do and its project, and lists the owners', () => {
   const ev = event();
   assert.equal(ev.title, 'Security review of token scopes — Online banking real-time balances');
-  assert.match(ev.description, /^To-do on Online banking real-time balances\./);
+  assert.match(ev.description, /^Task on Online banking real-time balances\./);
   assert.match(ev.description, /Owners: Alex, Sam/);
   assert.match(subtaskEvent({ text: 'x', owners: ['Alex'], projectTitle: 'P' }).description, /Owner: Alex/);
   assert.doesNotMatch(subtaskEvent({ text: 'x', projectTitle: 'P' }).description, /Owner/);
@@ -54,11 +54,11 @@ test('the Google link fills in the event, with times as UTC and the link in the 
   assert.equal(url.searchParams.get('action'), 'TEMPLATE');
   assert.equal(url.searchParams.get('text'), 'Security review of token scopes — Online banking real-time balances');
   assert.equal(url.searchParams.get('dates'), '20261023T130000Z/20261023T140000Z');
-  assert.equal(url.searchParams.get('details'), 'To-do on Online banking real-time balances.\nOwners: Alex, Sam\nhttp://clique.example/#/p/online-banking-real-time-balances');
+  assert.equal(url.searchParams.get('details'), 'Task on Online banking real-time balances.\nOwners: Alex, Sam\nhttp://clique.example/#/p/online-banking-real-time-balances');
 });
 
 test('the Google link leaves the link back out when the event has none', () => {
-  assert.equal(new URL(googleUrl(event({ url: undefined }))).searchParams.get('details'), 'To-do on Online banking real-time balances.\nOwners: Alex, Sam');
+  assert.equal(new URL(googleUrl(event({ url: undefined }))).searchParams.get('details'), 'Task on Online banking real-time balances.\nOwners: Alex, Sam');
 });
 
 test('the .ics file is a valid single event with UTC stamps and CRLF endings', () => {
@@ -92,7 +92,7 @@ test('long lines fold at 75 octets without splitting a character', () => {
 
 test('the file is named after the to-do', () => {
   assert.equal(icsFilename('Security review of token scopes'), 'security-review-of-token-scopes.ics');
-  assert.equal(icsFilename('  ???  '), 'to-do.ics');
+  assert.equal(icsFilename('  ???  '), 'task.ics');
   assert.ok(icsFilename('x'.repeat(200)).length <= 54);
 });
 

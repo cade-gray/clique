@@ -125,8 +125,8 @@ export default function ImportView({ workspace }) {
           <section>
             <h3>What goes where</h3>
             <ul className="mapping small">
-              <li>Task name → project title; description → the project's page</li>
-              <li>Checklist → to-dos</li>
+              <li>Planner task name → project title; description → the project's page</li>
+              <li>Planner checklist → tasks</li>
               <li>{mapLine('Assigned to', preview.targets.assignees)}</li>
               <li>{mapLine('Due date', preview.targets.due)}</li>
               <li>{mapLine('Priority', preview.targets.priority)}</li>

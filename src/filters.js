@@ -56,7 +56,7 @@ export function filterFields(workspace, projects) {
     {
       id: 'person',
       label: 'Person',
-      hint: 'Owns the project or one of its to-dos',
+      hint: 'Owns the project or one of its tasks',
       options: nameOptions([
         ...workspace.groups.map((g) => g.members),
         ...projects.map((p) => p.subtasks.owners ?? []),
