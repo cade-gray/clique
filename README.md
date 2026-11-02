@@ -26,6 +26,8 @@ Each project is more than a ticket:
 
 Everything is stored as plain markdown files on disk (Obsidian-style), so the documentation outlives the tool: it can be read, searched, backed up or put in git without Clique. There is no database and no login yet; everyone who can reach the site edits the same board.
 
+For a worked example of running a team on it — roles, a weekly cadence, stage gates and page templates for a small integration team — see [docs/team-guide.md](docs/team-guide.md).
+
 ## Run it
 
 Requires Node.js 20.19+ (22 LTS recommended).
