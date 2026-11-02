@@ -35,6 +35,8 @@ npm install
 npm run dev        # API on :3001 and Vite dev server on :5173 with hot reload, also reachable from your network
 ```
 
+`npm run dev` works on `data.local/`, a git-ignored copy of `data/` made on the first run, so local testing never shows up in git. Delete `data.local/` to start again from the starter workspace, or set `DATA_DIR` to use a different folder.
+
 Production:
 
 ```bash
@@ -47,7 +49,7 @@ npm test           # storage and calendar-event tests
 
 `DATA_DIR` (default `./data`) holds everything. The repo ships with a starter workspace in `data/` with a welcome project plus example projects for a credit union integrations team (each project is a built integration, such as an ITSM ↔ core banking incident sync), so a fresh clone opens to a working board. (If `workspace.yaml` is ever missing, the app recreates the defaults and the welcome project.) The `data/.trash/` folder and `data/events.ndjson` are git-ignored.
 
-Clique is built for one board shared by one team. To keep your team's real data in git, commit `data/` and use normal pull/push to share it; to keep it out of the repo, point `DATA_DIR` somewhere else.
+Clique is built for one board shared by one team. To keep your team's real data in git, point `DATA_DIR` at `data/` (`npm start` already uses it), commit it and use normal pull/push to share it; to keep it out of the repo, point `DATA_DIR` somewhere else.
 
 ```
 data/
@@ -751,6 +753,7 @@ Serverless or container services that have no persistent disk (App Runner, Lambd
 
 ```
 server/index.js        Express routes (/api/...) + static hosting of dist/
+server/dev.js          what npm run dev runs: seeds data.local/ from data/ (server/localData.js), then starts the server
 server/store.js        markdown-on-disk storage, frontmatter, conflict checks
 server/events.js       append-only event log (events.ndjson): writes, reads, skips unreadable lines
 server/stats.js        pure computeStats(projects, workspace, events) behind GET /api/stats

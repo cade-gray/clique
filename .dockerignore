@@ -4,6 +4,7 @@ node_modules
 dist
 logs
 data
+data.local
 .env
 .env.*
 compose.yaml
