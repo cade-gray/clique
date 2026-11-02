@@ -20,7 +20,7 @@ test('a block defaults to an hour at 9am tomorrow, local time', () => {
   assert.equal(event().end - event().start, 60 * 60 * 1000);
 });
 
-test('the event names the to-do and its project, and lists the owners', () => {
+test('the event names the task and its project, and lists the owners', () => {
   const ev = event();
   assert.equal(ev.title, 'Security review of token scopes — Online banking real-time balances');
   assert.match(ev.description, /^Task on Online banking real-time balances\./);
@@ -90,7 +90,7 @@ test('long lines fold at 75 octets without splitting a character', () => {
   assert.match(unfold(ics).find((l) => l.startsWith('SUMMARY:')), /gateway uses — every one of them/);
 });
 
-test('the file is named after the to-do', () => {
+test('the file is named after the task', () => {
   assert.equal(icsFilename('Security review of token scopes'), 'security-review-of-token-scopes.ics');
   assert.equal(icsFilename('  ???  '), 'task.ics');
   assert.ok(icsFilename('x'.repeat(200)).length <= 54);

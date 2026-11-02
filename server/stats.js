@@ -43,7 +43,7 @@ export function computeStats({ projects, workspace, events, now = new Date(), mo
 
   // ----- snapshot -----
 
-  const todos = projects.reduce(
+  const tasks = projects.reduce(
     (acc, p) => ({ done: acc.done + (p.subtasks?.done ?? 0), total: acc.total + (p.subtasks?.total ?? 0) }),
     { done: 0, total: 0 },
   );
@@ -54,7 +54,7 @@ export function computeStats({ projects, workspace, events, now = new Date(), mo
     graveyard: projects.filter((p) => p.status === GRAVEYARD_STATUS).length,
     blocked: projects.filter((p) => p.blocked).length,
     maintenance: projects.filter((p) => p.maintenance).length,
-    todos,
+    tasks,
   };
 
   const byStatus = workspace.columns.map((c) => ({
@@ -178,7 +178,7 @@ export function computeStats({ projects, workspace, events, now = new Date(), mo
   const people = new Map();
   const person = (name) => {
     const key = name.toLowerCase();
-    if (!people.has(key)) people.set(key, { name, groups: [], active: 0, live: 0, openTodos: 0, doneTodos: 0 });
+    if (!people.has(key)) people.set(key, { name, groups: [], active: 0, live: 0, openTasks: 0, doneTasks: 0 });
     return people.get(key);
   };
   for (const g of workspace.groups) for (const m of g.members) person(m).groups.push(g.name);
@@ -195,13 +195,13 @@ export function computeStats({ projects, workspace, events, now = new Date(), mo
     for (const t of p.subtasks?.items ?? []) {
       for (const name of t.owners ?? []) {
         const rec = person(name);
-        if (t.done) rec.doneTodos += 1;
-        else rec.openTodos += 1;
+        if (t.done) rec.doneTasks += 1;
+        else rec.openTasks += 1;
       }
     }
   }
   const peopleRows = [...people.values()].sort(
-    (a, b) => b.active - a.active || b.openTodos - a.openTodos || a.name.localeCompare(b.name),
+    (a, b) => b.active - a.active || b.openTasks - a.openTasks || a.name.localeCompare(b.name),
   );
 
   // ----- recent activity -----

@@ -15,7 +15,7 @@ import { MoreView, PhoneTabs } from './components/PhoneNav.jsx';
 //   #/            board view
 //   #/list        list view (table + export)
 //   #/stats       portfolio figures and what needs attention
-//   #/workday     one person's to-dos across every project (#/workday/:person to link to someone)
+//   #/workday     one person's tasks across every project (#/workday/:person to link to someone)
 //   #/p/:id       project overview
 //   #/p/:id/:page page inside a project
 //   #/settings    configuration: groups, project statuses and properties

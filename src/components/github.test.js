@@ -4,14 +4,14 @@ import { isIssueNumber, issueLabel, issueLink, issueNumber, newIssueUrl, repoPat
 
 const repo = 'https://github.com/cade-gray/clique';
 
-test('the new-issue form is filled in from the to-do', () => {
+test('the new-issue form is filled in from the task', () => {
   const url = new URL(newIssueUrl(repo, { text: 'Fix & ship #1', owners: ['Sam', 'Priya'], projectTitle: 'Clique', url: 'https://clique.local/#/p/clique' }));
   assert.equal(url.origin + url.pathname, `${repo}/issues/new`);
   assert.equal(url.searchParams.get('title'), 'Fix & ship #1');
   assert.equal(url.searchParams.get('body'), 'Task on Clique.\nOwners: Sam, Priya\n\n[Open in Clique](https://clique.local/#/p/clique)');
 });
 
-test('the form leaves out owners when the to-do has none, and says Owner for one', () => {
+test('the form leaves out owners when the task has none, and says Owner for one', () => {
   const body = (owners) => new URL(newIssueUrl(repo, { text: 'x', owners, projectTitle: 'P', url: 'u' })).searchParams.get('body');
   assert.equal(body(undefined), 'Task on P.\n\n[Open in Clique](u)');
   assert.equal(body(['Sam']), 'Task on P.\nOwner: Sam\n\n[Open in Clique](u)');

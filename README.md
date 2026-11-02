@@ -761,14 +761,15 @@ server/planner.js      Microsoft Planner import: finds the task table in the exp
 server/xlsx.js         minimal .xlsx reader used by the Planner import (no dependency)
 src/App.jsx            hash router and top bar
 src/usePhone.js        whether the phone layout applies; keep its query in step with the phone @media rule in styles.css
-src/components/        Board, ListView, StatsView, WorkdayView, ProjectView, Subtasks (tasks), TodoLinks (notes and issue buttons), Updates, Settings, ImportView, HelpView, DocBody (autosave), MarkdownEditor (Crepe), calendar.js (Outlook link / .ics)
+src/components/        Board, ListView, StatsView, WorkdayView, ProjectView, Subtasks (tasks), TaskLinks (notes and issue buttons), Updates, Settings, ImportView, HelpView, DocBody (autosave), MarkdownEditor (Crepe), calendar.js (Outlook link / .ics)
 src/components/PhoneBoard.jsx  the board on a phone: swipeable stages, compact cards, move and new-project sheets
 src/components/PhoneNav.jsx    bottom tabs and the More screen
 src/components/Sheet.jsx       bottom sheet; Popover opens as one on a phone
 src/components/phone.js        pure helpers for card placement and compact cards, with tests in phone.test.js
 src/components/pages.js        pure helpers that split a project's pages into wiki pages and task notes, with tests in pages.test.js
 src/components/workday.js      pure helpers that collect one person's tasks across projects, with tests in workday.test.js
-src/components/todos.js        pure helpers for dragging tasks into a new order, with tests in todos.test.js
+src/components/tasks.js        pure helpers for dragging tasks into a new order, with tests in tasks.test.js
+src/components/listView.js     what the list view shows, including settings saved before the rename, with tests in listView.test.js
 src/components/useTouchDrag.js  dragging a task by touch, which browsers don't do natively
 src/components/github.js       pure helpers for the new-issue form and linking issues, with tests in github.test.js
 src/components/charts.jsx  bars, stacked bars, columns, tiles and meters built from divs (no charting library)

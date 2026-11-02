@@ -60,7 +60,7 @@ test('project lifecycle: create, patch properties, subtasks, pages, trash', asyn
   assert.equal((await fs.readdir(store.trashDir)).length, 2);
 });
 
-test('a to-do keeps its linked doc through edits, reordering and being checked off', async () => {
+test('a task keeps its linked doc through edits, reordering and being checked off', async () => {
   const store = await freshStore();
   const p = await store.createProject({ title: 'Linked docs' });
   const page = await store.createPage(p.id, { title: 'Design' });
@@ -75,7 +75,7 @@ test('a to-do keeps its linked doc through edits, reordering and being checked o
   assert.match(file, /doc: design\n/);
 });
 
-test('deleting a to-do doc clears the link, and leaves other to-dos alone', async () => {
+test('deleting a task doc clears the link, and leaves other tasks alone', async () => {
   const store = await freshStore();
   const p = await store.createProject({ title: 'Linked docs' });
   const one = await store.createPage(p.id, { title: 'One' });
@@ -91,7 +91,7 @@ test('deleting a to-do doc clears the link, and leaves other to-dos alone', asyn
   assert.deepEqual((await store.getProject(p.id)).subtasks[0], { text: 'a', done: false });
 });
 
-test('deleting a page with no to-do does not touch the project', async () => {
+test('deleting a page with no task does not touch the project', async () => {
   const store = await freshStore();
   const p = await store.createProject({ title: 'Wiki page' });
   const page = await store.createPage(p.id, { title: 'Runbook' });
@@ -100,7 +100,7 @@ test('deleting a page with no to-do does not touch the project', async () => {
   assert.equal(await fs.readFile(store.projectFile(p.id), 'utf8'), before);
 });
 
-test('removing a to-do keeps its doc, which becomes an unlinked page', async () => {
+test('removing a task keeps its doc, which becomes an unlinked page', async () => {
   const store = await freshStore();
   const p = await store.createProject({ title: 'Linked docs' });
   const page = await store.createPage(p.id, { title: 'Design' });
@@ -208,7 +208,7 @@ test('a hand-edited repo that isn\'t one reads as no repo', async () => {
   assert.deepEqual((await store.getProject(p.id)).repos, []);
 });
 
-test('a to-do keeps a linked issue through edits, and drops anything that isn\'t one', async () => {
+test('a task keeps a linked issue through edits, and drops anything that isn\'t one', async () => {
   const store = await freshStore();
   const p = await store.createProject({ title: 'Issues' });
   const issue = 'https://github.com/cade-gray/clique/issues/27';
@@ -263,7 +263,7 @@ test('projects and subtasks can have multiple owners', async () => {
   const got = await store.getProject(p.id);
   assert.deepEqual(got.properties.owner, ['Cade', 'Sam']);
   assert.deepEqual(got.subtasks, [{ text: 'a', done: false, owners: ['Ann', 'Bo'] }, { text: 'b', done: false }]);
-  // Board summaries carry the to-do owners for filtering by person.
+  // Board summaries carry the task owners for filtering by person.
   assert.deepEqual((await store.listProjects()).find((x) => x.id === p.id).subtasks, { done: 0, total: 2, owners: ['Ann', 'Bo'] });
   await store.updateProject(p.id, { properties: { owner: [] } });
   assert.equal((await store.getProject(p.id)).properties.owner, undefined);
@@ -371,12 +371,12 @@ test('attachments are saved under the project with unique names and stay out of 
   assert.throws(() => store.attachmentFile(p.id, 'notes.md'), (e) => e.status === 400);
 });
 
-test('a live project with open to-dos is in maintenance, and says which ones', async () => {
+test('a live project with open tasks is in maintenance, and says which ones', async () => {
   const store = await freshStore();
   const p = await store.createProject({ title: 'Payments', status: 'live' });
   assert.deepEqual([p.maintenance, p.maintenanceReason], [false, '']);
 
-  // One open to-do: the to-do itself is the reason.
+  // One open task: the task itself is the reason.
   let got = await store.updateProject(p.id, { subtasks: [{ text: 'Refund webhook retries' }], blocked: true });
   assert.deepEqual([got.maintenance, got.maintenanceReason, got.blocked], [true, 'Refund webhook retries', true]);
 
@@ -384,13 +384,13 @@ test('a live project with open to-dos is in maintenance, and says which ones', a
   got = await store.updateProject(p.id, { subtasks: [{ text: 'Refund webhook retries' }, { text: 'Rotate the API key' }] });
   assert.deepEqual([got.maintenance, got.maintenanceReason], [true, '2 tasks open']);
 
-  // A checked-off to-do doesn't count, so the last one takes the project back out.
+  // A checked-off task doesn't count, so the last one takes the project back out.
   got = await store.updateProject(p.id, { subtasks: [{ text: 'Refund webhook retries', done: true }, { text: 'Rotate the API key' }] });
   assert.deepEqual([got.maintenance, got.maintenanceReason], [true, 'Rotate the API key']);
   got = await store.updateProject(p.id, { subtasks: [{ text: 'Refund webhook retries', done: true }, { text: 'Rotate the API key', done: true }] });
   assert.deepEqual([got.maintenance, got.maintenanceReason], [false, '']);
 
-  // Only Live counts: the same open to-do elsewhere is just work in progress.
+  // Only Live counts: the same open task elsewhere is just work in progress.
   got = await store.updateProject(p.id, { status: 'in-progress', subtasks: [{ text: 'Rotate the API key' }] });
   assert.deepEqual([got.maintenance, got.maintenanceReason], [false, '']);
   got = await store.updateProject(p.id, { status: 'live' });

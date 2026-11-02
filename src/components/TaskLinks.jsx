@@ -1,4 +1,4 @@
-// The notes and GitHub issue controls on a to-do, shared by the project page and the workday page.
+// The notes and GitHub issue controls on a task, shared by the project page and the workday page.
 
 import { useRef, useState } from 'react';
 import Popover from './Popover.jsx';
@@ -14,7 +14,7 @@ export function AddNotes({ onClick }) {
 }
 
 // `url` is the address the new issue links back to. `onChange` gets the issue's address, or nothing to unlink it.
-export function TodoIssue({ issue, repos, text, owners, projectTitle, url = window.location.href, onChange }) {
+export function TaskIssue({ issue, repos, text, owners, projectTitle, url = window.location.href, onChange }) {
   if (!issue) return repos.length > 0 && <IssueBlock repos={repos} text={text} owners={owners} projectTitle={projectTitle} url={url} onLink={onChange} />;
   return (
     <span className="subtask-issue">
@@ -26,8 +26,8 @@ export function TodoIssue({ issue, repos, text, owners, projectTitle, url = wind
   );
 }
 
-// The page is named after the to-do, so the title would only repeat the line above it.
-export function TodoDoc({ page, base, onOpen }) {
+// The page is named after the task, so the title would only repeat the line above it.
+export function TaskDoc({ page, base, onOpen }) {
   if (!page) return null;
   return (
     <a className="subtask-doc" href={`${base}/${encodeURIComponent(page.id)}`} title={page.title} aria-label={`Notes: ${page.title}`} onClick={onOpen}>

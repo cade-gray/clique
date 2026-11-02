@@ -4,7 +4,7 @@ import { navigate } from '../App.jsx';
 import { usePhone } from '../usePhone.js';
 import DocBody from './DocBody.jsx';
 import { repoPath } from './github.js';
-import { splitPages, todoOf } from './pages.js';
+import { splitPages, taskOf } from './pages.js';
 import { StagePicker } from './PhoneBoard.jsx';
 import Sheet from './Sheet.jsx';
 import Subtasks from './Subtasks.jsx';
@@ -33,7 +33,7 @@ export default function ProjectView({ id, pageId, workspace }) {
     load();
   }, [load]);
 
-  // Metadata edits (title, status, properties, to-dos) save immediately and never touch the body.
+  // Metadata edits (title, status, properties, tasks) save immediately and never touch the body.
   async function patch(fields) {
     setProject((p) => ({
       ...p,
@@ -59,9 +59,9 @@ export default function ProjectView({ id, pageId, workspace }) {
     navigate(`#/p/${encodeURIComponent(id)}/${encodeURIComponent(page.id)}`);
   }
 
-  // To-do notes are an ordinary page named after the to-do, with its id on the to-do. If the second
+  // Task notes are an ordinary page named after the task, with its id on the task. If the second
   // step fails, the page is still there, in the wiki. The guard stops a double click making two.
-  async function addTodoDoc(index) {
+  async function addTaskDoc(index) {
     if (addingDoc.current) return;
     addingDoc.current = true;
     try {
@@ -86,7 +86,7 @@ export default function ProjectView({ id, pageId, workspace }) {
 
   const base = `#/p/${encodeURIComponent(id)}`;
   const people = peopleFor(project, workspace);
-  const { wiki, todoDocs } = splitPages(project.pages, project.subtasks);
+  const { wiki, taskDocs } = splitPages(project.pages, project.subtasks);
 
   const saveBanner = saveError && (
     <div className="banner error doc-banner">
@@ -108,7 +108,7 @@ export default function ProjectView({ id, pageId, workspace }) {
           onMeta={(meta) => setProject((p) => ({ ...p, ...meta }))}
           onPagesChanged={load}
           onAddPage={addPage}
-          onAddTodoDoc={addTodoDoc}
+          onAddTaskDoc={addTaskDoc}
           onDelete={deleteProject}
         />
       </PeopleContext.Provider>
@@ -136,11 +136,11 @@ export default function ProjectView({ id, pageId, workspace }) {
         <button className="add-page" onClick={addPage}>
           + Add page
         </button>
-        {todoDocs.length > 0 && (
+        {taskDocs.length > 0 && (
           <nav className="pages">
             <div className="pages-heading">Task notes</div>
-            {todoDocs.map((p) => (
-              <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} className={pageId === p.id ? 'active' : ''} title={todoOf(p.id, project.subtasks).text}>
+            {taskDocs.map((p) => (
+              <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} className={pageId === p.id ? 'active' : ''} title={taskOf(p.id, project.subtasks).text}>
                 📝 {p.title}
               </a>
             ))}
@@ -151,7 +151,7 @@ export default function ProjectView({ id, pageId, workspace }) {
       <div className="doc">
         {saveBanner}
         {pageId ? (
-          <PageView key={pageId} projectId={id} pageId={pageId} todo={todoOf(pageId, project.subtasks)} onChanged={load} />
+          <PageView key={pageId} projectId={id} pageId={pageId} task={taskOf(pageId, project.subtasks)} onChanged={load} />
         ) : (
           <>
             <TitleInput value={project.title} onCommit={(title) => patch({ title })} />
@@ -165,7 +165,7 @@ export default function ProjectView({ id, pageId, workspace }) {
                 repos={project.repos}
                 projectTitle={project.title}
                 onChange={(subtasks) => patch({ subtasks })}
-                onAddDoc={addTodoDoc}
+                onAddDoc={addTaskDoc}
               />
 
               <Updates projectId={id} updates={project.updates} onChange={(meta) => setProject((p) => ({ ...p, ...meta }))} />
@@ -301,17 +301,17 @@ function RepoList({ repos, onChange }) {
   );
 }
 
-function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta, onPagesChanged, onAddPage, onAddTodoDoc, onDelete }) {
+function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta, onPagesChanged, onAddPage, onAddTaskDoc, onDelete }) {
   const id = project.id;
-  const [tab, setTab] = useState(pageId || project.status === LIVE_STATUS ? 'docs' : 'todos');
+  const [tab, setTab] = useState(pageId || project.status === LIVE_STATUS ? 'docs' : 'tasks');
   // The docs stay mounted once opened, so their editor keeps its unsaved text and version
   // while another tab is showing.
   const [docsOpened, setDocsOpened] = useState(tab === 'docs');
   const [pickingStage, setPickingStage] = useState(false);
   const doneCount = project.subtasks.filter((s) => s.done).length;
-  const { wiki, todoDocs } = splitPages(project.pages, project.subtasks);
+  const { wiki, taskDocs } = splitPages(project.pages, project.subtasks);
   const tabs = [
-    ['todos', project.subtasks.length ? `Tasks ${doneCount}/${project.subtasks.length}` : 'Tasks'],
+    ['tasks', project.subtasks.length ? `Tasks ${doneCount}/${project.subtasks.length}` : 'Tasks'],
     ['updates', 'Updates'],
     ['docs', 'Docs'],
     ['details', 'Details'],
@@ -322,7 +322,7 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
     if (next === 'docs') setDocsOpened(true);
   }
 
-  // To-dos link to their notes, which live on another tab. The back button can land here too.
+  // Tasks link to their notes, which live on another tab. The back button can land here too.
   useEffect(() => {
     if (pageId) open('docs');
   }, [pageId]);
@@ -362,7 +362,7 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
         ))}
       </div>
       <div className="project-panel">
-        {tab === 'todos' && (
+        {tab === 'tasks' && (
           <Subtasks
             items={project.subtasks}
             pages={project.pages}
@@ -370,7 +370,7 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
             repos={project.repos}
             projectTitle={project.title}
             onChange={(subtasks) => patch({ subtasks })}
-            onAddDoc={onAddTodoDoc}
+            onAddDoc={onAddTaskDoc}
             onOpenDoc={() => open('docs')}
           />
         )}
@@ -401,10 +401,10 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
                 +
               </button>
             </nav>
-            {todoDocs.length > 0 && (
+            {taskDocs.length > 0 && (
               <nav className="page-chips" aria-label="Task notes">
                 <span className="page-chips-label">Task notes</span>
-                {todoDocs.map((p) => (
+                {taskDocs.map((p) => (
                   <a key={p.id} href={`${base}/${encodeURIComponent(p.id)}`} className={pageId === p.id ? 'active' : ''}>
                     {p.title}
                   </a>
@@ -426,9 +426,9 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
                 key={pageId}
                 projectId={id}
                 pageId={pageId}
-                todo={todoOf(pageId, project.subtasks)}
+                task={taskOf(pageId, project.subtasks)}
                 onChanged={onPagesChanged}
-                onOpenTodo={() => open('todos')}
+                onOpenTask={() => open('tasks')}
                 phone
               />
             )}
@@ -472,7 +472,7 @@ function peopleFor(project, workspace) {
   return { label: group.name, members: group.members, others: everyone.filter((n) => !inGroup.has(n.toLowerCase())).sort(byName) };
 }
 
-function PageView({ projectId, pageId, todo, onChanged, onOpenTodo, phone = false }) {
+function PageView({ projectId, pageId, task, onChanged, onOpenTask, phone = false }) {
   const [page, setPage] = useState(null);
   const [error, setError] = useState(null);
 
@@ -499,13 +499,13 @@ function PageView({ projectId, pageId, todo, onChanged, onOpenTodo, phone = fals
   return (
     <>
       <TitleInput multiline={phone} value={page.title} onCommit={rename} />
-      {todo && (
-        <div className="page-todo">
+      {task && (
+        <div className="page-task">
           Task · story:{' '}
-          <a href={`#/p/${encodeURIComponent(projectId)}`} onClick={onOpenTodo}>
-            {todo.text}
+          <a href={`#/p/${encodeURIComponent(projectId)}`} onClick={onOpenTask}>
+            {task.text}
           </a>
-          {todo.done && <span className="muted"> (done)</span>}
+          {task.done && <span className="muted"> (done)</span>}
         </div>
       )}
       <DocBody

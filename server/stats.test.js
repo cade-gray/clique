@@ -89,7 +89,7 @@ test('snapshot counts come from the project files', () => {
     graveyard: 0,
     blocked: 1,
     maintenance: 1,
-    todos: { done: 1, total: 3 },
+    tasks: { done: 1, total: 3 },
   });
   assert.deepEqual(
     s.byStatus.map((x) => [x.id, x.count]),
@@ -168,8 +168,8 @@ test('a live project is never stale or overdue, but can still be blocked', () =>
 test('people are counted once per project and carry their group', () => {
   const s = run();
   const by = Object.fromEntries(s.people.map((p) => [p.name, p]));
-  assert.deepEqual(by.Ron, { name: 'Ron', groups: ['IT Core'], active: 1, live: 1, openTodos: 1, doneTodos: 1 });
-  assert.deepEqual(by.Ginger, { name: 'Ginger', groups: [], active: 1, live: 0, openTodos: 1, doneTodos: 0 });
+  assert.deepEqual(by.Ron, { name: 'Ron', groups: ['IT Core'], active: 1, live: 1, openTasks: 1, doneTasks: 1 });
+  assert.deepEqual(by.Ginger, { name: 'Ginger', groups: [], active: 1, live: 0, openTasks: 1, doneTasks: 0 });
 });
 
 test('recent activity is newest first and flags projects that no longer exist', () => {

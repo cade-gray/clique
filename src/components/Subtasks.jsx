@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { usePhone } from '../usePhone.js';
 import { docOf } from './pages.js';
-import { AddNotes, IssueLink, TodoDoc, TodoIssue } from './TodoLinks.jsx';
+import { AddNotes, IssueLink, TaskDoc, TaskIssue } from './TaskLinks.jsx';
 import { PeopleInput, Tag, fitToContent, formatDateTime, timeAgo, toPeople } from './props.jsx';
 import ScheduleButton from './ScheduleButton.jsx';
-import { moveToSlot, movesNowhere, slotAt } from './todos.js';
+import { moveToSlot, movesNowhere, slotAt } from './tasks.js';
 import { useTouchDrag } from './useTouchDrag.js';
 
 export default function Subtasks({ items, pages, base, repos, projectTitle, onChange, onAddDoc, onOpenDoc }) {
@@ -16,7 +16,7 @@ export default function Subtasks({ items, pages, base, repos, projectTitle, onCh
   // Keep each item's index in the full list so edits and reordering target the right entry.
   const entries = items.map((s, i) => ({ s, i }));
   const open = entries.filter((e) => !e.s.done);
-  // Checked-off to-dos move to History, most recently completed first.
+  // Checked-off tasks move to History, most recently completed first.
   const history = entries
     .filter((e) => e.s.done)
     .sort((a, b) => String(b.s.doneAt ?? '').localeCompare(String(a.s.doneAt ?? '')));
@@ -25,7 +25,7 @@ export default function Subtasks({ items, pages, base, repos, projectTitle, onCh
   const remove = (i) => onChange(items.filter((_, j) => j !== i));
   const setDone = (i, done) => update(i, { done, doneAt: done ? new Date().toISOString() : undefined });
 
-  // Where a drop would land. Nothing shows for a drop that wouldn't move the to-do.
+  // Where a drop would land. Nothing shows for a drop that wouldn't move the task.
   const from = open.findIndex((e) => e.i === dragIndex);
   const target = slot === null || movesNowhere(from, slot) ? null : slot;
 
@@ -39,8 +39,8 @@ export default function Subtasks({ items, pages, base, repos, projectTitle, onCh
   };
   const touchHandle = useTouchDrag({ listRef, onStart: setDragIndex, onSlot: setSlot, onDrop: finishDrag, onCancel: endDrag });
 
-  // Worked out from the rows, not the element under the pointer, so that the gaps between to-dos
-  // and the space around the list work as well as the to-dos themselves.
+  // Worked out from the rows, not the element under the pointer, so that the gaps between tasks
+  // and the space around the list work as well as the tasks themselves.
   const dragOver = (e) => {
     if (dragIndex === null) return;
     e.preventDefault();
@@ -100,7 +100,7 @@ export default function Subtasks({ items, pages, base, repos, projectTitle, onCh
             </span>
             <input type="checkbox" checked={false} onChange={() => setDone(i, true)} />
             <div className="subtask-main">
-              {/* A to-do is one line of text: Enter saves it rather than adding a line break. */}
+              {/* A task is one line of text: Enter saves it rather than adding a line break. */}
               <textarea
                 key={s.text}
                 className="subtask-text"
@@ -130,11 +130,11 @@ export default function Subtasks({ items, pages, base, repos, projectTitle, onCh
               <div className="subtask-actions">
                 <ScheduleButton text={s.text} owners={s.owners} projectTitle={projectTitle} />
                 {s.doc ? (
-                  <TodoDoc page={docOf(s, pages)} base={base} onOpen={onOpenDoc} />
+                  <TaskDoc page={docOf(s, pages)} base={base} onOpen={onOpenDoc} />
                 ) : (
                   <AddNotes onClick={() => onAddDoc(i)} />
                 )}
-                <TodoIssue issue={s.issue} repos={repos} text={s.text} owners={s.owners} projectTitle={projectTitle} onChange={(issue) => update(i, { issue })} />
+                <TaskIssue issue={s.issue} repos={repos} text={s.text} owners={s.owners} projectTitle={projectTitle} onChange={(issue) => update(i, { issue })} />
               </div>
             </div>
             <button className="icon" onClick={() => remove(i)} title="Delete subtask">
@@ -143,7 +143,7 @@ export default function Subtasks({ items, pages, base, repos, projectTitle, onCh
           </li>
         ))}
       </ul>
-      <NewTodo onAdd={(text) => onChange([...items, { text, done: false }])} />
+      <NewTask onAdd={(text) => onChange([...items, { text, done: false }])} />
       {history.length > 0 && (
         <details className="subtask-history">
           <summary>History ({history.length})</summary>
@@ -168,7 +168,7 @@ export default function Subtasks({ items, pages, base, repos, projectTitle, onCh
                       </span>
                     )}
                   </div>
-                  <TodoDoc page={docOf(s, pages)} base={base} onOpen={onOpenDoc} />
+                  <TaskDoc page={docOf(s, pages)} base={base} onOpen={onOpenDoc} />
                   {s.issue && <IssueLink url={s.issue} repos={repos} />}
                 </div>
                 <button className="icon" onClick={() => remove(i)} title="Delete subtask">
@@ -183,9 +183,9 @@ export default function Subtasks({ items, pages, base, repos, projectTitle, onCh
   );
 }
 
-// A to-do is one line of text that may wrap, so pasted line breaks become spaces and Enter adds it.
-// Text left in the box stays there on blur: a stray tap should not create a to-do.
-function NewTodo({ onAdd }) {
+// A task is one line of text that may wrap, so pasted line breaks become spaces and Enter adds it.
+// Text left in the box stays there on blur: a stray tap should not create a task.
+function NewTask({ onAdd }) {
   const [text, setText] = useState('');
   const box = useRef(null);
   useLayoutEffect(() => fitToContent(box.current), [text]);

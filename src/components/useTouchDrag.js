@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { edgeSpeed, slotAt } from './todos.js';
+import { edgeSpeed, slotAt } from './tasks.js';
 
 // Browsers on phones don't start a native drag from a touch, so the card follows pointer events
 // instead. Only a handle starts one (it has touch-action: none), which leaves the rest of the page
