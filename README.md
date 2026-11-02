@@ -110,8 +110,8 @@ properties:               # shown on every project, in this order
     name: Go-live
     type: date
 
-groups:                   # teams; each project can belong to one
-  - id: it-integrations   # stable id, stored in each project's `group`
+groups:                   # teams; a project can belong to several
+  - id: it-integrations   # stable id, stored in each project's `groups`
     name: IT Integrations # the label people see; safe to rename any time
     members:              # offered first when choosing owners on the group's projects
       - Alex
@@ -134,7 +134,7 @@ groups:                   # teams; each project can belong to one
 
 | Field | Rules |
 | --- | --- |
-| `key` | Same format as a column `id`, unique. It becomes a flat key in every project's frontmatter. It can't be one of the built-in keys: `title`, `status`, `order`, `group`, `repo`, `repos`, `subtasks`, `blocked`, `blockedReason`, `maintenance`, `updates`, `created`, `updated`. |
+| `key` | Same format as a column `id`, unique. It becomes a flat key in every project's frontmatter. It can't be one of the built-in keys: `title`, `status`, `order`, `group`, `groups`, `repo`, `repos`, `subtasks`, `blocked`, `blockedReason`, `maintenance`, `updates`, `created`, `updated`. |
 | `name` | The label shown in the UI and the CSV, up to 80 characters. |
 | `type` | One of the types below. |
 | `options` | For `select` and `multi_select`: a list of `{ value, color }`. Colors: `gray`, `brown`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `red`. |
@@ -162,11 +162,11 @@ Things worth knowing when you change a property:
 
 | Field | Rules |
 | --- | --- |
-| `id` | Same format as a column `id`, unique. Stored in each project as `group`, so don't change it once projects use it. |
+| `id` | Same format as a column `id`, unique. Stored in each project's `groups` list, so don't change it once projects use it. |
 | `name` | The label shown on the project, the card and the list view, up to 80 characters. |
 | `members` | Names, as they appear in owner fields. Duplicates (ignoring case) are dropped. |
 
-- Removing a group leaves its projects without one; the old id stays in their files until the project is next given a group.
+- Removing a group takes it off its projects; the old id stays in their files until the project's groups are next changed.
 - Owners are still stored as plain names. Removing someone from a group, or renaming them, doesn't change projects they already own.
 
 ### Project files
@@ -177,7 +177,8 @@ Each project is a markdown file with YAML frontmatter. The properties from `work
 ---
 title: Website Redesign
 status: in-progress          # a column id from workspace.yaml
-group: it-integrations       # optional; a group id from workspace.yaml
+groups:                      # optional; group ids from workspace.yaml
+  - it-integrations          # (a single `group: <id>` from older files still works)
 repos:                       # optional; the GitHub repositories for this project's issues
   - https://github.com/acme/website
 order: 0                     # position within the column
@@ -213,6 +214,7 @@ Property, status and task changes save immediately. Each property and the status
 
 ## Features
 
+- **Perspectives** (board, list and stats): a row of buttons, one per group plus **All groups**, shows just that group's projects, including those shared with other groups. The choice is shared by all three pages and remembered in the browser, and it leaves your filters alone. A project created on the board starts in the group you're viewing. On Stats, history follows the projects a group has now, so a deleted project's history only counts under **All groups**.
 - **Filters** (board and list view): **+ Filter** adds a filter on status, group, person (owns the project or one of its tasks), flags (blocked / in maintenance), or any select, multi-select, people, checkbox or date property. Each filter is a chip with a checkbox per value and a count of matching projects; checking several values in one filter shows projects with any of them, and separate filters must all match. A status filter on the board hides the other columns. Filters are shared by both views and remembered in the browser.
 - **List view**: every project in a sortable table (status, group, blocked + reason, each property, task progress, last updated) with each project's tasks (with owners) listed beneath it. **Columns** picks which columns show and whether to list tasks, finished tasks and task owners, so a report can be trimmed for management; the choice is remembered in the browser. **Export CSV** downloads exactly what is shown (opens in Excel/Sheets); with tasks on, there is one row per task that repeats the project columns, so it can be filtered or pivoted. **Print / PDF** gives a clean light-themed report of the same, with a line saying which filters were applied.
 - **Board view**: columns are statuses; drag cards between and within columns (with filters on, a dropped card lands next to the visible card it was dropped by); search titles and filter as above; card shows properties and task progress.
@@ -222,7 +224,7 @@ Property, status and task changes save immediately. Each property and the status
 - **Status updates**: a comment-style timeline on each project (`updates` in the frontmatter, newest first, with an optional name). The latest update shows on the board card and in the list view and CSV.
 - **Blocked**: tick Blocked on a project to outline its card in red; an optional reason shows on the card (`blocked` / `blockedReason` in the frontmatter).
 - **Maintenance**: a project in the **Live** column is in maintenance whenever it has an open task, and its card is outlined in yellow. There is nothing to tick: adding a task to a live project puts it into maintenance, and checking off the last one takes it out again. The reason shows next to the flag — the task's own text, or `3 tasks open` once there is more than one — on the card, the project page, the list view and the CSV. A project that is both blocked and in maintenance gets a yellow outline with a red one around it. Maintenance is worked out from the tasks rather than stored, so it is never in the frontmatter, and a `maintenance:` line left by an older version is ignored and dropped the next time the project is saved.
-- **Groups**: define teams and their people under Configuration. Pick a project's group when creating it on the board (the last one you used is preselected) or on the project page. Owner fields on the project and its tasks then open a dropdown of that group's members; other people show up as you type, and any other name can still be typed in. The group shows on the card and as a column in the list view and CSV.
+- **Groups**: define teams and their people under Configuration. Pick a project's group when creating it on the board (the perspective you're in, or else the last one you used, is preselected), and add more on the project page. Owner fields on the project and its tasks then open a dropdown of those groups' members; other people show up as you type, and any other name can still be typed in. The groups show on the card and as a column in the list view and CSV.
 - **Tasks**: add from the box under the list with Enter or **Add** (always shown on a phone), check off, edit inline, drag to reorder (a blue line shows where the task will land), assign multiple owners. Checked-off tasks move to a collapsed History section. (They are stored under the `subtasks` frontmatter key.) **📅 Schedule** books time to work on one: it offers Google Calendar and Outlook on the web, which open a pre-filled draft, or a `.ics` download for desktop Outlook, Apple Calendar and the rest. The block starts as an hour at 9am tomorrow and is meant to be dragged to a free slot in the calendar itself, where the day's conflicts are visible. Nothing is saved in Clique, so it never claims to know what your calendar actually holds.
 - **GitHub issues**: give a project one or more **GitHub repos** and each open task gets **🔗 Issue**. **Create on GitHub** opens GitHub's new-issue form in a new tab with the task filled in; with several repos there's one **Create in owner/repo** link for each. Submit the form there, then paste its link or number back into Clique to link it; with several repos, a number also asks which repo it's in. An existing issue is linked the same way, as long as it's in one of the project's repos. The task then shows the issue number as a link, with the repo's name in front when the project has several (`website#12`), and **×** unlinks it. Removing a repo leaves its linked issues in place. A project file with the older single `repo:` line keeps working, and is rewritten as `repos:` the next time its repos change. Clique holds no GitHub login, so issues are created under each person's own account, and it doesn't read an issue's state: closing one doesn't check off the task.
 - **Global properties** (Configuration screen): text, number, select, multi-select, people (multiple owners), date, checkbox, URL. Select options have colours. Each property's key is fixed at creation since it is the frontmatter key in every file; renaming only changes its label.

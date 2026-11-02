@@ -38,7 +38,7 @@ export const api = {
   deleteProject: (id) => request('DELETE', `projects/${enc(id)}`),
   reorder: (status, ids) => request('POST', 'board/reorder', { status, ids }),
 
-  stats: () => request('GET', 'stats'),
+  stats: (group) => request('GET', group ? `stats?group=${enc(group)}` : 'stats'),
 
   page: (id, page) => request('GET', `projects/${enc(id)}/pages/${enc(page)}`),
   createPage: (id, input) => request('POST', `projects/${enc(id)}/pages`, input),

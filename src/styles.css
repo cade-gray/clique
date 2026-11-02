@@ -165,6 +165,10 @@ main { flex: 1; min-height: 0; }
 .new-card-form select { padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg); color: var(--text); }
 
 /* ---------- filters and menus ---------- */
+.perspectives { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.perspectives button { flex: none; border: 1px solid transparent; background: none; color: var(--muted); border-radius: 6px; padding: 5px 10px; font-size: 13px; }
+.perspectives button:hover { background: var(--hover); color: var(--text); }
+.perspectives button.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--panel)); color: var(--text); font-weight: 600; }
 .filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .filter-bar > * { flex-shrink: 0; }
 .filter-anchor { position: relative; display: inline-flex; }
@@ -758,6 +762,10 @@ table.list tr.stale td:first-child { box-shadow: inset 3px 0 0 var(--handle); }
   .list-wrap.phone-list { padding: 0 0 16px; }
   .phone-list-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 16px 4px; background: var(--panel); border-bottom: 1px solid var(--border); }
   .phone-list-tools .search { flex: 1 1 160px; width: auto; min-width: 0; }
+  .perspectives { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .perspectives button { min-height: 44px; }
+  .phone-board .perspectives { flex: none; margin: 0; padding: 4px 16px; background: var(--panel); }
+  .phone-list-tools .perspectives { flex: 1 1 100%; min-width: 0; margin: 0; }
   .phone-list-sort { flex: 1 1 100%; display: flex; align-items: center; gap: 4px; }
   .phone-list-sort select { height: 44px; max-width: 150px; padding: 0 6px; color: var(--text); border: 1px solid var(--border); border-radius: 8px; background: var(--input-bg); }
   .phone-rows { list-style: none; margin: 0; padding: 0; background: var(--panel); }
@@ -866,4 +874,5 @@ table.list tr.stale td:first-child { box-shadow: inset 3px 0 0 var(--handle); }
 @media print {
   .phone-tabs { display: none; }
   .activity-toggle { display: none; }
+  .perspectives { display: none; }
 }

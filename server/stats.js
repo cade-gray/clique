@@ -1,8 +1,8 @@
 // Portfolio figures for the stats page.
 //
 // `computeStats` is a pure function of the project summaries, the workspace and the event
-// log, so it can be tested without touching the disk. Two different kinds of number come
-// out of it:
+// log, so it can be tested without touching the disk. Passing `group` narrows everything to
+// that group's projects. Two different kinds of number come out of it:
 //
 //   * A snapshot (how many projects sit where, what is blocked, who is carrying what) read
 //     straight from the markdown files. Always complete.
@@ -37,7 +37,14 @@ function median(sorted) {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-export function computeStats({ projects, workspace, events, now = new Date(), monthsBack = 12, staleDays = 30 }) {
+export function computeStats({ projects: allProjects, workspace, events: allEvents, group = null, now = new Date(), monthsBack = 12, staleDays = 30 }) {
+  // An unknown group (deleted since it was picked, say) reads as the whole board. The log doesn't
+  // record groups, so a group's history is the history of the projects it has now.
+  const scope = workspace.groups.find((g) => g.id === group) ?? null;
+  const projects = scope ? allProjects.filter((p) => p.groups.includes(scope.id)) : allProjects;
+  const inScope = new Set(projects.map((p) => p.id));
+  const events = scope ? allEvents.filter((e) => e.type === 'log-started' || inScope.has(e.project)) : allEvents;
+
   const columnName = new Map(workspace.columns.map((c) => [c.id, c.name]));
   const nameOf = (status) => columnName.get(status) ?? status ?? '—';
 
@@ -64,10 +71,10 @@ export function computeStats({ projects, workspace, events, now = new Date(), mo
   }));
 
   // Groups in the order they are configured, with ungrouped projects last and only when
-  // there are any.
-  const byGroup = [...workspace.groups.map((g) => ({ id: g.id, name: g.name })), { id: null, name: 'No group' }]
+  // there are any. A project in two groups counts in both.
+  const byGroup = [...(scope ? [scope] : workspace.groups).map((g) => ({ id: g.id, name: g.name })), { id: null, name: 'No group' }]
     .map((g) => {
-      const mine = projects.filter((p) => (p.group ?? null) === g.id);
+      const mine = projects.filter((p) => (g.id === null ? p.groups.length === 0 : p.groups.includes(g.id)));
       return {
         id: g.id,
         name: g.name,
@@ -163,8 +170,10 @@ export function computeStats({ projects, workspace, events, now = new Date(), mo
       title: p.title,
       status: p.status,
       statusName: nameOf(p.status),
-      group: p.group ?? null,
-      groupName: p.group ? (workspace.groups.find((g) => g.id === p.group)?.name ?? p.group) : '',
+      groupName: workspace.groups
+        .filter((g) => p.groups.includes(g.id))
+        .map((g) => g.name)
+        .join(', '),
       reasons,
     });
   }
@@ -181,7 +190,7 @@ export function computeStats({ projects, workspace, events, now = new Date(), mo
     if (!people.has(key)) people.set(key, { name, groups: [], active: 0, live: 0, openTasks: 0, doneTasks: 0 });
     return people.get(key);
   };
-  for (const g of workspace.groups) for (const m of g.members) person(m).groups.push(g.name);
+  for (const g of scope ? [scope] : workspace.groups) g.members.forEach(person);
   for (const p of projects) {
     // Someone named in two different people properties on one project still owns one project.
     const owners = new Map();
@@ -200,6 +209,8 @@ export function computeStats({ projects, workspace, events, now = new Date(), mo
       }
     }
   }
+  // Everyone's groups, even on one group's page: someone helping on its projects may be from another.
+  for (const g of workspace.groups) for (const m of g.members) people.get(m.toLowerCase())?.groups.push(g.name);
   const peopleRows = [...people.values()].sort(
     (a, b) => b.active - a.active || b.openTasks - a.openTasks || a.name.localeCompare(b.name),
   );

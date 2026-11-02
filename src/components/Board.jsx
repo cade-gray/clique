@@ -5,6 +5,8 @@ import { activeFilters, filterFields, matches } from '../filters.js';
 import { usePhone } from '../usePhone.js';
 import FilterBar from './FilterBar.jsx';
 import PhoneBoard from './PhoneBoard.jsx';
+import Perspectives from './Perspectives.jsx';
+import { groupNames, inPerspective } from './perspective.js';
 import { placeInColumn } from './phone.js';
 import { PropertyValue, formatDateTime, isEmpty, timeAgo } from './props.jsx';
 
@@ -23,8 +25,8 @@ function lastGroup(groups) {
   return groups[0]?.id ?? '';
 }
 
-export default function Board({ workspace, filters, onFilters }) {
-  const [projects, setProjects] = useState(null);
+export default function Board({ workspace, filters, onFilters, perspective, onPerspective }) {
+  const [allProjects, setProjects] = useState(null);
   const [query, setQuery] = useState('');
   const [drag, setDrag] = useState(null); // { id, over: { status, index } }
   const [adding, setAdding] = useState(null); // column id with the "new project" input open
@@ -43,6 +45,7 @@ export default function Board({ workspace, filters, onFilters }) {
     };
   }, [load]);
 
+  const projects = useMemo(() => allProjects?.filter((p) => inPerspective(p, perspective)) ?? null, [allProjects, perspective]);
   const fields = useMemo(() => filterFields(workspace, projects ?? []), [workspace, projects]);
   const columns = useMemo(() => {
     // A status filter hides the other columns rather than showing them empty.
@@ -71,11 +74,11 @@ export default function Board({ workspace, filters, onFilters }) {
   }
 
   // Put a project at `index` among the visible cards of a column, leaving out the project itself.
-  // Projects hidden by a search or filter keep their place. A column hidden by a status filter
+  // Projects hidden by a search, filter or perspective keep their place. A column hidden by a status filter
   // has no visible cards, so the project goes to its end.
   async function place(id, status, index) {
     const ids = placeInColumn({
-      allIds: projects
+      allIds: allProjects
         .filter((p) => p.status === status)
         .sort((a, b) => a.order - b.order)
         .map((p) => p.id),
@@ -106,11 +109,15 @@ export default function Board({ workspace, filters, onFilters }) {
     } catch {
       // storage unavailable; the choice just isn't remembered
     }
-    const p = await api.createProject({ title, status, group: group || null });
+    const p = await api.createProject({ title, status, groups: group ? [group] : [] });
     navigate(`#/p/${encodeURIComponent(p.id)}`);
   }
 
   if (!projects) return <div className="loading">Loading…</div>;
+
+  // Working in a team's perspective, a new project is that team's unless you pick otherwise.
+  const newGroup = perspective || lastGroup(workspace.groups);
+  const perspectiveBar = <Perspectives groups={workspace.groups} value={perspective} onChange={onPerspective} />;
 
   if (phone) {
     return (
@@ -118,12 +125,13 @@ export default function Board({ workspace, filters, onFilters }) {
         workspace={workspace}
         columns={columns}
         projects={projects}
+        perspectiveBar={perspectiveBar}
         shownCount={shownCount}
         query={query}
         onQuery={setQuery}
         filterBar={<FilterBar fields={fields} projects={projects} filters={filters} onChange={onFilters} />}
         filtersActive={activeFilters(filters, fields).length > 0}
-        defaultGroup={lastGroup(workspace.groups)}
+        defaultGroup={newGroup}
         onCreate={create}
         onPlace={place}
       />
@@ -132,6 +140,7 @@ export default function Board({ workspace, filters, onFilters }) {
 
   return (
     <div className="board-wrap">
+      {perspectiveBar}
       <div className="board-toolbar">
         <input className="search" placeholder="Search titles…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <FilterBar fields={fields} projects={projects} filters={filters} onChange={onFilters} />
@@ -176,7 +185,7 @@ export default function Board({ workspace, filters, onFilters }) {
               {drag?.over?.status === col.id && drag.over.index === col.items.length && <div className="drop-marker" />}
             </div>
             {adding === col.id ? (
-              <NewCardInput groups={workspace.groups} onDone={(title, group) => create(col.id, title, group)} />
+              <NewCardInput groups={workspace.groups} defaultGroup={newGroup} onDone={(title, group) => create(col.id, title, group)} />
             ) : (
               <button className="add-card" onClick={() => setAdding(col.id)}>
                 + New project
@@ -191,7 +200,7 @@ export default function Board({ workspace, filters, onFilters }) {
 
 function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd, onDragOverCard }) {
   const { subtasks } = project;
-  const group = workspace.groups.find((g) => g.id === project.group);
+  const groups = groupNames(project, workspace.groups);
   return (
     <>
       {dropBefore && <div className="drop-marker" />}
@@ -225,10 +234,10 @@ function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd
           </div>
         )}
         <div className="card-props">
-          {group && (
+          {groups.length > 0 && (
             <div className="card-prop">
-              <span className="card-prop-label">Group</span>
-              <span className="card-prop-value">{group.name}</span>
+              <span className="card-prop-label">{groups.length > 1 ? 'Groups' : 'Group'}</span>
+              <span className="card-prop-value">{groups.join(', ')}</span>
             </div>
           )}
           {workspace.properties
@@ -265,10 +274,10 @@ function Card({ project, workspace, dragging, dropBefore, onDragStart, onDragEnd
   );
 }
 
-// Title plus, when groups exist, which group the project belongs to. Enter creates it;
+// Title plus, when groups exist, the group to start the project in. Enter creates it;
 // Escape, or leaving the form with an empty title, cancels.
-function NewCardInput({ groups, onDone }) {
-  const [group, setGroup] = useState(() => lastGroup(groups));
+function NewCardInput({ groups, defaultGroup, onDone }) {
+  const [group, setGroup] = useState(defaultGroup);
   const done = useRef(false);
   const title = useRef(null);
   const finish = (v) => {

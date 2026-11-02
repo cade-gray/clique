@@ -17,7 +17,7 @@ import { EventLog, taskChanges } from './events.js';
 
 // `maintenance` is derived from the open tasks and never written, but it stays reserved so the
 // leftover key in a file saved by an older version doesn't show up as a custom property.
-export const RESERVED_KEYS = ['title', 'status', 'order', 'group', 'repo', 'repos', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
+export const RESERVED_KEYS = ['title', 'status', 'order', 'group', 'groups', 'repo', 'repos', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
 
 // The column for projects that are in production. Only projects here can be in maintenance.
 export const LIVE_STATUS = 'live';
@@ -365,8 +365,7 @@ export class Store {
       id,
       title: data.title || id,
       status,
-      // A group that has since been deleted reads as no group.
-      group: ws.groups.some((g) => g.id === data.group) ? data.group : null,
+      groups: projectGroups(data, ws),
       repos: projectRepos(data),
       order: Number(data.order) || 0,
       properties: props,
@@ -421,11 +420,11 @@ export class Store {
     return id;
   }
 
-  async createProject({ title, status, group }) {
+  async createProject({ title, status, groups: picked }) {
     title = String(title ?? '').trim() || 'Untitled project';
     const ws = await this.getWorkspace();
     if (!ws.columns.some((c) => c.id === status)) status = defaultStatus(ws);
-    if (group && !ws.groups.some((g) => g.id === group)) throw new HttpError(400, 'Unknown group');
+    const groups = knownGroups(picked, ws);
     const id = await this.uniqueId(this.projectsDir, slugify(title));
     const siblings = (await this.listProjects()).filter((p) => p.status === status);
     const order = siblings.length ? Math.max(...siblings.map((p) => p.order)) + 1 : 0;
@@ -433,7 +432,7 @@ export class Store {
     const ts = now();
     await writeFileAtomic(
       this.projectFile(id),
-      stringifyMarkdown({ title, status, ...(group ? { group } : {}), order, created: ts, updated: ts, subtasks: [] }, ''),
+      stringifyMarkdown({ title, status, ...(groups.length ? { groups } : {}), order, created: ts, updated: ts, subtasks: [] }, ''),
     );
     await this.events.append({ at: ts, type: 'created', project: id, title, to: status });
     return this.getProject(id);
@@ -461,10 +460,12 @@ export class Store {
         data.status = patch.status;
       }
       if (patch.order !== undefined) data.order = Number(patch.order) || 0;
-      if (patch.group !== undefined) {
-        if (!patch.group) delete data.group;
-        else if (!ws.groups.some((g) => g.id === patch.group)) throw new HttpError(400, 'Unknown group');
-        else data.group = patch.group;
+      if (patch.groups !== undefined) {
+        const groups = knownGroups(patch.groups, ws);
+        // A project saved before it could have several keeps its one group in `group` until now.
+        delete data.group;
+        if (groups.length) data.groups = groups;
+        else delete data.groups;
       }
       if (patch.repos !== undefined) {
         const entered = (Array.isArray(patch.repos) ? patch.repos : [patch.repos]).filter((r) => String(r ?? '').trim());
@@ -696,6 +697,19 @@ export function normalizeRepo(value) {
   const text = String(value ?? '').trim().replace(/^git@([^:]+):/, '$1/');
   const m = /^(?:https?:\/\/)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:[/?#].*)?$/i.exec(text);
   return m ? `https://${m[1].toLowerCase()}/${m[2]}/${m[3]}` : null;
+}
+
+// A project's groups in the order they are configured. One saved before a project could have
+// several holds a single `group`, and a group that has since been deleted is ignored.
+function projectGroups(data, ws) {
+  const ids = [data.groups ?? data.group].flat();
+  return ws.groups.filter((g) => ids.includes(g.id)).map((g) => g.id);
+}
+
+function knownGroups(input, ws) {
+  const ids = [...new Set([input ?? []].flat().filter(Boolean))];
+  if (ids.some((id) => !ws.groups.some((g) => g.id === id))) throw new HttpError(400, 'Unknown group');
+  return ids;
 }
 
 // Hand-edited groups that can't be used (bad id, duplicate) are skipped rather than failing every request.

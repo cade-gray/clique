@@ -10,7 +10,7 @@ const memory = { stage: null, tops: {} };
 // The board on a phone: one stage fills the screen, and a swipe or the strip of stage names moves
 // between them. Cards are shorter than on desktop, and moving one happens in a sheet, because
 // browsers on phones don't start a drag from a touch.
-export default function PhoneBoard({ workspace, columns, projects, shownCount, query, onQuery, filterBar, filtersActive, defaultGroup, onCreate, onPlace }) {
+export default function PhoneBoard({ workspace, columns, projects, perspectiveBar, shownCount, query, onQuery, filterBar, filtersActive, defaultGroup, onCreate, onPlace }) {
   const [stage, setStage] = useState(memory.stage);
   const [searching, setSearching] = useState(Boolean(query));
   const [filtering, setFiltering] = useState(filtersActive);
@@ -74,6 +74,7 @@ export default function PhoneBoard({ workspace, columns, projects, shownCount, q
           </svg>
         </button>
       </header>
+      {perspectiveBar}
       {searching && (
         <div className="phone-row">
           <input className="search" type="search" autoFocus aria-label="Search titles" placeholder="Search titles…" value={query} onChange={(e) => onQuery(e.target.value)} />

@@ -25,7 +25,7 @@ const projects = [
     id: 'p-old',
     title: 'Old thing',
     status: 'live',
-    group: 'core',
+    groups: ['core'],
     properties: { owner: ['Ron'] },
     blocked: false,
     maintenance: true,
@@ -45,7 +45,7 @@ const projects = [
     id: 'p-new',
     title: 'New thing',
     status: 'in-progress',
-    group: 'core',
+    groups: ['core'],
     properties: { owner: ['Ron', 'Ginger'], due: '2026-10-01' },
     blocked: true,
     blockedReason: 'waiting on vendor',
@@ -58,7 +58,7 @@ const projects = [
     id: 'p-stale',
     title: 'Stale thing',
     status: 'backlog',
-    group: null,
+    groups: [],
     properties: {},
     blocked: false,
     maintenance: false,
@@ -143,6 +143,35 @@ test('cycle time measures creation to the first go-live', () => {
   assert.equal(s.delivery.medianDays, 184);
   assert.equal(s.delivery.averageDays, 184);
   assert.equal(s.delivery.last90, 1);
+});
+
+test('a group perspective narrows the figures to that group, shared projects included', () => {
+  const cards = { id: 'cards', name: 'IT Cards', members: ['Mia'] };
+  const ws = { ...workspace, groups: [...workspace.groups, cards] };
+  const shared = projects.map((p) => (p.id === 'p-new' ? { ...p, groups: ['core', 'cards'] } : p));
+  const s = run({ projects: shared, workspace: ws, group: 'cards' });
+
+  assert.equal(s.totals.projects, 1);
+  assert.deepEqual(s.byGroup.map((g) => [g.name, g.total]), [['IT Cards', 1]]);
+  assert.deepEqual(s.attention.map((a) => [a.id, a.groupName]), [['p-new', 'IT Core, IT Cards']]);
+
+  // Events for other groups' projects drop out, but the log's start still says what was recorded.
+  assert.equal(s.delivery.total, 0);
+  assert.ok(s.history.startedAt);
+  assert.ok(s.recent.every((e) => e.project === 'p-new'));
+
+  // Only this group's members are listed, plus whoever works on its projects, with all their groups.
+  const by = Object.fromEntries(s.people.map((p) => [p.name, p]));
+  assert.deepEqual(by.Mia.groups, ['IT Cards']);
+  assert.deepEqual(by.Ron.groups, ['IT Core']);
+  assert.equal(by.Ron.active, 1);
+
+  const whole = run({ projects: shared, workspace: ws });
+  assert.deepEqual(whole.byGroup.map((g) => [g.name, g.total]), [['IT Core', 2], ['IT Cards', 1], ['No group', 1]]);
+});
+
+test('an unknown group shows the whole board', () => {
+  assert.equal(run({ group: 'deleted' }).totals.projects, 3);
 });
 
 test('attention lists the worst reason first and skips retired projects', () => {

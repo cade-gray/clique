@@ -38,8 +38,8 @@ export function toPeople(v) {
   return Array.isArray(v) ? v : isEmpty(v) ? [] : [String(v)];
 }
 
-// Who to offer when picking people. `members` (the project's group, or everyone when the project
-// has no group) are listed as soon as the box is focused; `others` only once something is typed.
+// Who to offer when picking people. `members` (the project's groups, or everyone when the project
+// has none) are listed as soon as the box is focused; `others` only once something is typed.
 export const PeopleContext = createContext({ label: '', members: [], others: [] });
 
 // Chips plus a text box with a dropdown of suggestions. Enter or comma adds what's typed,

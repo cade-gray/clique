@@ -9,7 +9,7 @@ import { StagePicker } from './PhoneBoard.jsx';
 import Sheet from './Sheet.jsx';
 import Subtasks from './Subtasks.jsx';
 import Updates from './Updates.jsx';
-import { CardMeta, PeopleContext, PropertyInput, fitToContent, toPeople } from './props.jsx';
+import { CardMeta, PeopleContext, PropertyInput, Tag, fitToContent, toPeople } from './props.jsx';
 
 export default function ProjectView({ id, pageId, workspace }) {
   const [project, setProject] = useState(null);
@@ -191,7 +191,32 @@ export default function ProjectView({ id, pageId, workspace }) {
   );
 }
 
-// Status, group, flags and the workspace's properties, edited in place.
+function GroupsInput({ project, groups, onChange }) {
+  const remaining = groups.filter((g) => !project.groups.includes(g.id));
+  return (
+    <div className="multi">
+      {groups
+        .filter((g) => project.groups.includes(g.id))
+        .map((g) => (
+          <Tag key={g.id} onRemove={() => onChange(project.groups.filter((id) => id !== g.id))}>
+            {g.name}
+          </Tag>
+        ))}
+      {remaining.length > 0 && (
+        <select aria-label="Add group" value="" onChange={(e) => e.target.value && onChange([...project.groups, e.target.value])}>
+          <option value="">+ Add</option>
+          {remaining.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  );
+}
+
+// Status, groups, flags and the workspace's properties, edited in place.
 function ProjectProps({ project, workspace, patch }) {
   return (
     <div className="props">
@@ -205,17 +230,10 @@ function ProjectProps({ project, workspace, patch }) {
           ))}
         </select>
       </div>
-      {(workspace.groups.length > 0 || project.group) && (
-        <div className="prop-row">
-          <label>Group</label>
-          <select value={project.group ?? ''} onChange={(e) => patch({ group: e.target.value || null })}>
-            <option value="">No group</option>
-            {workspace.groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
+      {workspace.groups.length > 0 && (
+        <div className="prop-row prop-row-multi_select">
+          <label>Groups</label>
+          <GroupsInput project={project} groups={workspace.groups} onChange={(groups) => patch({ groups })} />
         </div>
       )}
       <div className="prop-row prop-row-url">
@@ -451,7 +469,7 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
   );
 }
 
-// Owner suggestions: the project's group first, with everyone else on offer once a name is typed.
+// Owner suggestions: the project's groups first, with everyone else on offer once a name is typed.
 // Without a group, everyone in any group (plus names already on the project) is listed.
 function peopleFor(project, workspace) {
   const seen = new Set();
@@ -466,10 +484,15 @@ function peopleFor(project, workspace) {
   for (const def of workspace.properties) if (def.type === 'people') toPeople(project.properties[def.key]).forEach(add);
   for (const s of project.subtasks) toPeople(s.owners).forEach(add);
   const byName = (a, b) => a.localeCompare(b);
-  const group = workspace.groups.find((g) => g.id === project.group);
-  if (!group) return { label: '', members: everyone.sort(byName), others: [] };
-  const inGroup = new Set(group.members.map((n) => n.toLowerCase()));
-  return { label: group.name, members: group.members, others: everyone.filter((n) => !inGroup.has(n.toLowerCase())).sort(byName) };
+  const groups = workspace.groups.filter((g) => project.groups.includes(g.id));
+  if (!groups.length) return { label: '', members: everyone.sort(byName), others: [] };
+  // Someone in two of the project's groups is offered once.
+  const inGroups = new Map(groups.flatMap((g) => g.members).map((n) => [n.toLowerCase(), n]));
+  return {
+    label: groups.map((g) => g.name).join(', '),
+    members: [...inGroups.values()],
+    others: everyone.filter((n) => !inGroups.has(n.toLowerCase())).sort(byName),
+  };
 }
 
 function PageView({ projectId, pageId, task, onChanged, onOpenTask, phone = false }) {

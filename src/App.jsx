@@ -10,6 +10,7 @@ import HelpView from './components/HelpView.jsx';
 import StatsView from './components/StatsView.jsx';
 import WorkdayView from './components/WorkdayView.jsx';
 import { MoreView, PhoneTabs } from './components/PhoneNav.jsx';
+import { currentPerspective } from './components/perspective.js';
 
 // Hash routes keep deep links working on IIS without URL rewrite rules:
 //   #/            board view
@@ -88,6 +89,27 @@ function useFilters() {
   return [filters, update];
 }
 
+// Board, list and stats share one perspective, remembered in this browser between visits.
+const PERSPECTIVE_KEY = 'clique-perspective';
+function usePerspective() {
+  const [perspective, setPerspective] = useState(() => {
+    try {
+      return localStorage.getItem(PERSPECTIVE_KEY) ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const update = useCallback((next) => {
+    setPerspective(next);
+    try {
+      localStorage.setItem(PERSPECTIVE_KEY, next);
+    } catch {
+      // storage unavailable; the choice just won't be remembered
+    }
+  }, []);
+  return [perspective, update];
+}
+
 export function navigate(hash) {
   window.location.hash = hash;
 }
@@ -98,6 +120,8 @@ export default function App() {
   const [error, setError] = useState(null);
   const [theme, toggleTheme] = useTheme();
   const [filters, setFilters] = useFilters();
+  const [savedPerspective, onPerspective] = usePerspective();
+  const perspective = { perspective: currentPerspective(savedPerspective, workspace?.groups ?? []), onPerspective };
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash());
@@ -152,10 +176,10 @@ export default function App() {
       </header>
       <main>
         {error && <div className="banner error">Could not reach the server: {error.message}</div>}
-        {workspace && route.view === 'board' && <Board workspace={workspace} filters={filters} onFilters={setFilters} />}
-        {workspace && route.view === 'list' && <ListView workspace={workspace} filters={filters} onFilters={setFilters} />}
+        {workspace && route.view === 'board' && <Board workspace={workspace} filters={filters} onFilters={setFilters} {...perspective} />}
+        {workspace && route.view === 'list' && <ListView workspace={workspace} filters={filters} onFilters={setFilters} {...perspective} />}
         {workspace && route.view === 'workday' && <WorkdayView workspace={workspace} person={route.person} />}
-        {workspace && route.view === 'stats' && <StatsView workspace={workspace} />}
+        {workspace && route.view === 'stats' && <StatsView workspace={workspace} {...perspective} />}
         {workspace && route.view === 'project' && (
           <ProjectView key={route.id} id={route.id} pageId={route.page} workspace={workspace} />
         )}
