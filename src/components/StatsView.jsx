@@ -186,7 +186,7 @@ export default function StatsView({ workspace }) {
         <p className="muted small">
           Counted from the people properties on each project and the owners on its tasks. Retired projects are left out.
         </p>
-        <Meter done={stats.totals.todos.done} total={stats.totals.todos.total} label="Tasks across the board" />
+        <Meter done={stats.totals.tasks.done} total={stats.totals.tasks.total} label="Tasks across the board" />
         {stats.people.length === 0 ? (
           <p className="muted">No people are named on any project yet.</p>
         ) : (
@@ -207,7 +207,7 @@ export default function StatsView({ workspace }) {
                   <td className="muted">{p.groups.join(', ')}</td>
                   <td className="num">{p.active}</td>
                   <td className="num">{p.live}</td>
-                  <td className="num">{p.openTodos}</td>
+                  <td className="num">{p.openTasks}</td>
                 </tr>
               ))}
             </tbody>

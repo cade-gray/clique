@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { describeFilters, filterFields, matches } from '../filters.js';
 import { usePhone } from '../usePhone.js';
 import FilterBar from './FilterBar.jsx';
+import { DEFAULT_VIEW, savedView } from './listView.js';
 import Popover from './Popover.jsx';
 import { CardMeta, PropertyValue, Tag, formatDate, formatDateTime, isEmpty, timeAgo, toPeople } from './props.jsx';
 
@@ -10,11 +11,10 @@ const POLL_MS = 10000;
 
 // What the list shows (and so what CSV and print include), remembered in this browser.
 const VIEW_KEY = 'clique-list-view';
-const DEFAULT_VIEW = { hidden: [], todos: true, doneTodos: true, todoOwners: true };
 function useListView() {
   const [view, setView] = useState(() => {
     try {
-      return { ...DEFAULT_VIEW, ...JSON.parse(localStorage.getItem(VIEW_KEY)) };
+      return savedView(localStorage.getItem(VIEW_KEY));
     } catch {
       return DEFAULT_VIEW;
     }
@@ -131,7 +131,7 @@ export default function ListView({ workspace, filters, onFilters }) {
   // The project name is always shown; everything else can be hidden.
   const columns = useMemo(() => allColumns.filter((c) => c.id === 'title' || !view.hidden.includes(c.id)), [allColumns, view.hidden]);
   const fields = useMemo(() => filterFields(workspace, projects ?? []), [workspace, projects]);
-  const todosOf = (p) => (view.doneTodos ? (p.subtasks.items ?? []) : (p.subtasks.items ?? []).filter((t) => !t.done));
+  const tasksOf = (p) => (view.doneTasks ? (p.subtasks.items ?? []) : (p.subtasks.items ?? []).filter((t) => !t.done));
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -156,7 +156,7 @@ export default function ListView({ workspace, filters, onFilters }) {
       if (c.id === 'subtasks') header.push('Tasks done', 'Tasks total', 'Progress');
       if (c.extra) header.push('Latest update by', 'Latest update date');
     }
-    if (view.todos) header.push('Task', 'Task status', ...(view.todoOwners ? ['Task owners'] : []));
+    if (view.tasks) header.push('Task', 'Task status', ...(view.taskOwners ? ['Task owners'] : []));
     const lines = [header.map((h) => csvCell(h, false))];
     for (const p of rows) {
       const cells = [];
@@ -170,13 +170,13 @@ export default function ListView({ workspace, filters, onFilters }) {
           cells.push(p.subtasks.done, p.subtasks.total, pr === null ? '' : `${Math.round(pr * 100)}%`);
         }
       }
-      // With to-dos on, each to-do gets its own row that repeats the project columns,
-      // so the file can be filtered and pivoted by project. A project without to-dos is one row.
-      const items = view.todos ? todosOf(p) : [];
-      const todoCells = (t) => [csvCell(t.text), t.done ? 'Done' : 'Open', ...(view.todoOwners ? [csvCell(toPeople(t.owners).join(', '))] : [])];
-      if (!view.todos) lines.push(cells);
-      else if (items.length === 0) lines.push([...cells, ...todoCells({ text: '' }).map(() => '')]);
-      else for (const t of items) lines.push([...cells, ...todoCells(t)]);
+      // With tasks on, each task gets its own row that repeats the project columns,
+      // so the file can be filtered and pivoted by project. A project without tasks is one row.
+      const items = view.tasks ? tasksOf(p) : [];
+      const taskCells = (t) => [csvCell(t.text), t.done ? 'Done' : 'Open', ...(view.taskOwners ? [csvCell(toPeople(t.owners).join(', '))] : [])];
+      if (!view.tasks) lines.push(cells);
+      else if (items.length === 0) lines.push([...cells, ...taskCells({ text: '' }).map(() => '')]);
+      else for (const t of items) lines.push([...cells, ...taskCells(t)]);
     }
     const day = new Date().toISOString().slice(0, 10);
     download(`clique-projects-${day}.csv`, lines.map((l) => l.join(',')).join('\r\n') + '\r\n');
@@ -254,15 +254,15 @@ export default function ListView({ workspace, filters, onFilters }) {
               ))}
               <div className="popover-label">Tasks</div>
               <label className="popover-item check">
-                <input type="checkbox" checked={view.todos} onChange={(e) => setView({ todos: e.target.checked })} />
+                <input type="checkbox" checked={view.tasks} onChange={(e) => setView({ tasks: e.target.checked })} />
                 List tasks under each project
               </label>
-              <label className={`popover-item check ${view.todos ? '' : 'muted'}`}>
-                <input type="checkbox" disabled={!view.todos} checked={view.doneTodos} onChange={(e) => setView({ doneTodos: e.target.checked })} />
+              <label className={`popover-item check ${view.tasks ? '' : 'muted'}`}>
+                <input type="checkbox" disabled={!view.tasks} checked={view.doneTasks} onChange={(e) => setView({ doneTasks: e.target.checked })} />
                 Include finished tasks
               </label>
-              <label className={`popover-item check ${view.todos ? '' : 'muted'}`}>
-                <input type="checkbox" disabled={!view.todos} checked={view.todoOwners} onChange={(e) => setView({ todoOwners: e.target.checked })} />
+              <label className={`popover-item check ${view.tasks ? '' : 'muted'}`}>
+                <input type="checkbox" disabled={!view.tasks} checked={view.taskOwners} onChange={(e) => setView({ taskOwners: e.target.checked })} />
                 Show task owners
               </label>
               <div className="popover-foot">
@@ -295,27 +295,27 @@ export default function ListView({ workspace, filters, onFilters }) {
           </thead>
           <tbody>
             {rows.map((p) => {
-              const todos = view.todos ? todosOf(p) : [];
+              const tasks = view.tasks ? tasksOf(p) : [];
               return (
                 <Fragment key={p.id}>
-                  <tr className={`project-row ${p.blocked ? 'blocked' : ''} ${p.maintenance ? 'maintenance' : ''} ${todos.length ? 'has-subtasks' : ''}`}>
+                  <tr className={`project-row ${p.blocked ? 'blocked' : ''} ${p.maintenance ? 'maintenance' : ''} ${tasks.length ? 'has-subtasks' : ''}`}>
                     {columns.map((c) => (
                       <td key={c.id} className={`col-${c.id.replace(/\W/g, '-')}`}>
                         <Cell c={c} p={p} workspace={workspace} />
                       </td>
                     ))}
                   </tr>
-                  {todos.length > 0 && (
+                  {tasks.length > 0 && (
                     <tr className="subtask-row">
                       <td colSpan={columns.length}>
                         <ul className="list-subtasks">
-                          {todos.map((t, i) => (
+                          {tasks.map((t, i) => (
                             <li key={i} className={t.done ? 'done' : ''}>
                               <span className="box" aria-label={t.done ? 'Done' : 'Open'}>
                                 {t.done ? '☑' : '☐'}
                               </span>
                               <span className="text">{t.text}</span>
-                              {view.todoOwners && toPeople(t.owners).map((n) => <Tag key={n}>{n}</Tag>)}
+                              {view.taskOwners && toPeople(t.owners).map((n) => <Tag key={n}>{n}</Tag>)}
                             </li>
                           ))}
                         </ul>

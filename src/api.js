@@ -20,7 +20,7 @@ async function request(method, url, body) {
 const enc = encodeURIComponent;
 
 // Keep in step with LIVE_STATUS in server/store.js: only projects in this column can be in
-// maintenance, which the server works out from their open to-dos.
+// maintenance, which the server works out from their open tasks.
 export const LIVE_STATUS = 'live';
 // Keep in step with GRAVEYARD_STATUS there too: the column for retired projects.
 export const GRAVEYARD_STATUS = 'graveyard';

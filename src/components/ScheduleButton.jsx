@@ -3,7 +3,7 @@ import Popover from './Popover.jsx';
 import { downloadIcs, formatSlot, googleUrl, icsFilename, icsText, outlookUrl, subtaskEvent } from './calendar.js';
 import { toPeople } from './props.jsx';
 
-// Books time to work on a to-do. Clique hands the event to a calendar and keeps nothing: there is
+// Books time to work on a task. Clique hands the event to a calendar and keeps nothing: there is
 // no way for it to know whether the block was kept, moved or deleted afterwards. `url` is the link
 // the event carries back to Clique, and defaults to the page it was booked from.
 export default function ScheduleButton({ text, owners, projectTitle, url = window.location.href }) {

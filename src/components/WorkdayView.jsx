@@ -3,8 +3,8 @@ import { api } from '../api.js';
 import { navigate } from '../App.jsx';
 import { Tag, formatDateTime, timeAgo } from './props.jsx';
 import ScheduleButton from './ScheduleButton.jsx';
-import { AddNotes, IssueLink, TodoDoc, TodoIssue } from './TodoLinks.jsx';
-import { findTodo, todosFor, withTodo, workdayPeople } from './workday.js';
+import { AddNotes, IssueLink, TaskDoc, TaskIssue } from './TaskLinks.jsx';
+import { findTask, tasksFor, withTask, workdayPeople } from './workday.js';
 
 const POLL_MS = 30000;
 const PERSON_KEY = 'clique-workday-person';
@@ -21,7 +21,7 @@ function plural(n, word) {
   return `${n} ${word}${n === 1 ? '' : 's'}`;
 }
 
-// One person's to-dos from every project, for planning a day. `person` comes from the link, so a
+// One person's tasks from every project, for planning a day. `person` comes from the link, so a
 // page can be bookmarked; a bare link opens on whoever this browser last picked.
 export default function WorkdayView({ workspace, person }) {
   const [projects, setProjects] = useState(null);
@@ -51,37 +51,37 @@ export default function WorkdayView({ workspace, person }) {
     };
   }, [load]);
 
-  // To-dos are saved as a whole list and this page's copy can be 30 seconds old, so a change starts
+  // Tasks are saved as a whole list and this page's copy can be 30 seconds old, so a change starts
   // from the project as it is now. Saving the copy could undo someone's edit on the project page.
-  async function change(todo, apply) {
+  async function change(task, apply) {
     if (changing.current) return;
     changing.current = true;
     setFailed(null);
     try {
-      const { subtasks } = await api.project(todo.project.id);
-      const index = findTodo(subtasks, todo.text);
+      const { subtasks } = await api.project(task.project.id);
+      const index = findTask(subtasks, task.text);
       if (index < 0) throw new Error('This task has changed, or another has the same text. Refresh, or use the project page.');
       await apply(subtasks, index);
     } catch (e) {
-      setFailed({ key: todo.key, message: e.message });
+      setFailed({ key: task.key, message: e.message });
     } finally {
       changing.current = false;
       load();
     }
   }
 
-  function setIssue(todo, issue) {
-    return change(todo, (subtasks, index) => api.updateProject(todo.project.id, { subtasks: withTodo(subtasks, index, { issue }) }));
+  function setIssue(task, issue) {
+    return change(task, (subtasks, index) => api.updateProject(task.project.id, { subtasks: withTask(subtasks, index, { issue }) }));
   }
 
   // Notes someone has added since this page last loaded are opened, rather than a second page made.
-  function openNotes(todo) {
-    const { id } = todo.project;
-    return change(todo, async (subtasks, index) => {
+  function openNotes(task) {
+    const { id } = task.project;
+    return change(task, async (subtasks, index) => {
       let { doc } = subtasks[index];
       if (!doc) {
         doc = (await api.createPage(id, { title: subtasks[index].text })).id;
-        await api.updateProject(id, { subtasks: withTodo(subtasks, index, { doc }) });
+        await api.updateProject(id, { subtasks: withTask(subtasks, index, { doc }) });
       }
       navigate(`#/p/${encodeURIComponent(id)}/${encodeURIComponent(doc)}`);
     });
@@ -103,7 +103,7 @@ export default function WorkdayView({ workspace, person }) {
   const people = workdayPeople(workspace, projects);
   const wanted = (person ?? rememberedPerson() ?? '').toLowerCase();
   const current = people.find((n) => n.toLowerCase() === wanted) ?? '';
-  const { open, done } = current ? todosFor(current, projects, workspace) : { open: [], done: [] };
+  const { open, done } = current ? tasksFor(current, projects, workspace) : { open: [], done: [] };
   const projectCount = new Set(open.map((t) => t.project.id)).size;
 
   return (
@@ -132,7 +132,7 @@ export default function WorkdayView({ workspace, person }) {
       {open.length > 0 && (
         <ul className="workday-list">
           {open.map((t) => (
-            <WorkdayTodo key={t.key} todo={t} workspace={workspace} error={failed?.key === t.key ? failed.message : null} onAddNotes={openNotes} onIssue={setIssue} />
+            <WorkdayTask key={t.key} task={t} workspace={workspace} error={failed?.key === t.key ? failed.message : null} onAddNotes={openNotes} onIssue={setIssue} />
           ))}
         </ul>
       )}
@@ -142,7 +142,7 @@ export default function WorkdayView({ workspace, person }) {
           <summary>Done ({done.length})</summary>
           <ul className="workday-list">
             {done.map((t) => (
-              <WorkdayTodo key={t.key} todo={t} workspace={workspace} />
+              <WorkdayTask key={t.key} task={t} workspace={workspace} />
             ))}
           </ul>
         </details>
@@ -151,31 +151,31 @@ export default function WorkdayView({ workspace, person }) {
   );
 }
 
-function WorkdayTodo({ todo, workspace, error, onAddNotes, onIssue }) {
-  const { project } = todo;
+function WorkdayTask({ task, workspace, error, onAddNotes, onIssue }) {
+  const { project } = task;
   const projectLink = `#/p/${encodeURIComponent(project.id)}`;
   const projectUrl = `${window.location.href.split('#')[0]}${projectLink}`;
   return (
-    <li className={`workday-todo ${todo.done ? 'done' : ''}`}>
-      <div className="workday-text">{todo.text}</div>
+    <li className={`workday-task ${task.done ? 'done' : ''}`}>
+      <div className="workday-text">{task.text}</div>
       <div className="workday-meta">
         <a href={`#/p/${encodeURIComponent(project.id)}`}>{project.title}</a>
         <span>{workspace.columns.find((c) => c.id === project.status)?.name}</span>
-        {todo.doneAt && <span title={formatDateTime(todo.doneAt)}>{timeAgo(todo.doneAt)}</span>}
-        {todo.potentialBlocker && <Tag color="orange">Potential blocker</Tag>}
+        {task.doneAt && <span title={formatDateTime(task.doneAt)}>{timeAgo(task.doneAt)}</span>}
+        {task.potentialBlocker && <Tag color="orange">Potential blocker</Tag>}
       </div>
-      {todo.potentialBlocker && project.blockedReason && <div className="workday-reason">Project blocked: {project.blockedReason}</div>}
-      {todo.done ? (
+      {task.potentialBlocker && project.blockedReason && <div className="workday-reason">Project blocked: {project.blockedReason}</div>}
+      {task.done ? (
         <div className="workday-actions">
-          {todo.doc && <TodoDoc page={{ id: todo.doc, title: todo.text }} base={projectLink} />}
-          {todo.issue && <IssueLink url={todo.issue} repos={project.repos} />}
+          {task.doc && <TaskDoc page={{ id: task.doc, title: task.text }} base={projectLink} />}
+          {task.issue && <IssueLink url={task.issue} repos={project.repos} />}
         </div>
       ) : (
         <div className="workday-actions">
-          {/* Events and issues link to the to-do's project, which this person can act on, not to this list. */}
-          <ScheduleButton text={todo.text} owners={todo.owners} projectTitle={project.title} url={projectUrl} />
-          {todo.doc ? <TodoDoc page={{ id: todo.doc, title: todo.text }} base={projectLink} /> : <AddNotes onClick={() => onAddNotes(todo)} />}
-          <TodoIssue issue={todo.issue} repos={project.repos} text={todo.text} owners={todo.owners} projectTitle={project.title} url={projectUrl} onChange={(issue) => onIssue(todo, issue)} />
+          {/* Events and issues link to the task's project, which this person can act on, not to this list. */}
+          <ScheduleButton text={task.text} owners={task.owners} projectTitle={project.title} url={projectUrl} />
+          {task.doc ? <TaskDoc page={{ id: task.doc, title: task.text }} base={projectLink} /> : <AddNotes onClick={() => onAddNotes(task)} />}
+          <TaskIssue issue={task.issue} repos={project.repos} text={task.text} owners={task.owners} projectTitle={project.title} url={projectUrl} onChange={(issue) => onIssue(task, issue)} />
         </div>
       )}
       {error && (

@@ -4,10 +4,10 @@ import { GRAVEYARD_STATUS } from '../api.js';
 
 const lower = (s) => String(s).toLowerCase();
 
-// A retired project's leftover to-dos aren't anyone's work.
+// A retired project's leftover tasks aren't anyone's work.
 const inPlay = (projects) => projects.filter((p) => p.status !== GRAVEYARD_STATUS);
 
-// Everyone in a group, plus anyone who owns a to-do. Names are matched ignoring case; the first
+// Everyone in a group, plus anyone who owns a task. Names are matched ignoring case; the first
 // spelling seen is the one shown.
 export function workdayPeople(workspace, projects) {
   const seen = new Map();
@@ -16,22 +16,22 @@ export function workdayPeople(workspace, projects) {
   return [...seen.values()].sort((a, b) => a.localeCompare(b));
 }
 
-// Where a to-do is now, going by its text, since this page's copy can be out of date and to-dos have
-// no id. -1 if it has gone or been reworded, or if two to-dos read the same and it can't be told apart.
-export function findTodo(items, text) {
+// Where a task is now, going by its text, since this page's copy can be out of date and tasks have
+// no id. -1 if it has gone or been reworded, or if two tasks read the same and it can't be told apart.
+export function findTask(items, text) {
   const found = items.flatMap((t, i) => (t.text === text ? [i] : []));
   return found.length === 1 ? found[0] : -1;
 }
 
-// The whole list with one to-do changed, because to-dos are saved as a list.
-export function withTodo(items, index, fields) {
+// The whole list with one task changed, because tasks are saved as a list.
+export function withTask(items, index, fields) {
   return items.map((t, i) => (i === index ? { ...t, ...fields } : t));
 }
 
-// Open to-dos follow the board: column by column, then each project's own order. `potentialBlocker`
-// only says the project is blocked; that may have nothing to do with this to-do, and a finished
-// to-do can't be held up by it.
-export function todosFor(person, projects, workspace) {
+// Open tasks follow the board: column by column, then each project's own order. `potentialBlocker`
+// only says the project is blocked; that may have nothing to do with this task, and a finished
+// task can't be held up by it.
+export function tasksFor(person, projects, workspace) {
   const name = lower(person);
   const column = (p) => workspace.columns.findIndex((c) => c.id === p.status);
   const rows = inPlay(projects)

@@ -1,7 +1,7 @@
 // Markdown-on-disk storage. Layout under DATA_DIR:
 //
 //   workspace.yaml              board columns, globally defined properties, and groups of people
-//   projects/<id>/index.md      the project: frontmatter (status, properties, to-dos, updates) + overview body
+//   projects/<id>/index.md      the project: frontmatter (status, properties, tasks, updates) + overview body
 //   projects/<id>/<page>.md     extra pages inside the project
 //   projects/<id>/attachments/  images pasted into the project's pages, linked as attachments/<file>
 //   events.ndjson               append-only history of creates, status moves and deletes
@@ -15,7 +15,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import YAML from 'yaml';
 import { EventLog } from './events.js';
 
-// `maintenance` is derived from the open to-dos and never written, but it stays reserved so the
+// `maintenance` is derived from the open tasks and never written, but it stays reserved so the
 // leftover key in a file saved by an older version doesn't show up as a custom property.
 export const RESERVED_KEYS = ['title', 'status', 'order', 'group', 'repo', 'repos', 'subtasks', 'blocked', 'blockedReason', 'maintenance', 'updates', 'created', 'updated'];
 
@@ -115,7 +115,7 @@ export const IMAGE_TYPES = {
 };
 // A single file name (no folders), so an attachment path can never leave the attachments folder.
 const ATTACHMENT_RE = /^\w[\w .-]{0,119}\.(png|jpe?g|gif|webp|avif|bmp)$/i;
-// A to-do's linked issue is shown as a link, so only an address of this shape is ever kept.
+// A task's linked issue is shown as a link, so only an address of this shape is ever kept.
 const ISSUE_RE = /^https:\/\/[\w.-]+\/[\w.-]+\/[\w.-]+\/issues\/[1-9]\d*$/;
 function assertId(id, what = 'id') {
   if (typeof id !== 'string' || !ID_RE.test(id)) throw new HttpError(400, `Invalid ${what}`);
@@ -323,7 +323,7 @@ export class Store {
     return path.join(this.projectDir(id), `${page}.md`);
   }
 
-  // `version` is a hash of the body only, so editing properties or to-dos never
+  // `version` is a hash of the body only, so editing properties or tasks never
   // makes someone's in-progress body edit look like a conflict.
   async readDoc(file) {
     let text;
@@ -358,7 +358,7 @@ export class Store {
     for (const [k, v] of Object.entries(data)) if (!RESERVED_KEYS.includes(k)) props[k] = v;
     const status = ws.columns.some((c) => c.id === data.status) ? data.status : defaultStatus(ws);
     // A live project with work still open on it is in maintenance: nobody sets the flag by hand,
-    // so it goes away by itself when the last to-do is checked off.
+    // so it goes away by itself when the last task is checked off.
     const open = subtasks.filter((s) => !s.done);
     const maintenance = status === LIVE_STATUS && open.length > 0;
     return {
@@ -375,17 +375,17 @@ export class Store {
       blocked: data.blocked === true,
       blockedReason: data.blocked === true ? String(data.blockedReason ?? '') : '',
       maintenance,
-      // The one open to-do is the reason; past that, the count is, because a list of them
+      // The one open task is the reason; past that, the count is, because a list of them
       // wouldn't fit on a card.
       maintenanceReason: !maintenance ? '' : open.length === 1 ? open[0].text : `${open.length} tasks open`,
-      // Everyone who owns a to-do, so views can filter by person without loading every to-do.
+      // Everyone who owns a task, so views can filter by person without loading every task.
       subtasks: { done: subtasks.filter((s) => s.done).length, total: subtasks.length, owners: normalizePeople(subtasks.flatMap((s) => s.owners ?? [])) },
       created: data.created ?? null,
       updated: data.updated ?? null,
     };
   }
 
-  // `withSubtasks` adds the full to-do list to each summary (used by the list view and exports).
+  // `withSubtasks` adds the full task list to each summary (used by the list view and exports).
   async listProjects({ withSubtasks = false } = {}) {
     const ws = await this.getWorkspace();
     const entries = await fs.readdir(this.projectsDir, { withFileTypes: true });
@@ -495,7 +495,7 @@ export class Store {
           else data[k] = val;
         }
       }
-      // Maintenance is worked out from the to-dos now, so a file written by an older version
+      // Maintenance is worked out from the tasks now, so a file written by an older version
       // loses its stale flag the next time the project is saved.
       delete data.maintenance;
       data.updated = now();
@@ -635,7 +635,7 @@ export class Store {
     const file = this.pageFile(id, page);
     if (!(await exists(file))) throw new HttpError(404, 'Not found');
     await this.moveToTrash(file, `${id}--${page}.md`);
-    // Clear the link too, so a new page that reuses this id doesn't inherit the to-do.
+    // Clear the link too, so a new page that reuses this id doesn't inherit the task.
     const projectFile = this.projectFile(id);
     await withLock(projectFile, async () => {
       const doc = await this.readDoc(projectFile);
@@ -659,8 +659,8 @@ function normalizeSubtasks(list) {
       if (doneAt && !Number.isNaN(doneAt.getTime())) out.doneAt = doneAt.toISOString();
       const owners = normalizePeople(s.owners);
       if (owners.length) out.owners = owners;
-      // The id of the project's page written for this to-do. The link lives on the to-do, so it
-      // follows the to-do through rewording and reordering, and a page with no to-do is a wiki page.
+      // The id of the project's page written for this task. The link lives on the task, so it
+      // follows the task through rewording and reordering, and a page with no task is a wiki page.
       if (typeof s.doc === 'string' && ID_RE.test(s.doc)) out.doc = s.doc;
       if (typeof s.issue === 'string' && ISSUE_RE.test(s.issue)) out.issue = s.issue;
       return out;

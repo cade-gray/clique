@@ -1,4 +1,4 @@
-// Booking time to work on a to-do. Clique stores nothing about it: the event is handed straight
+// Booking time to work on a task. Clique stores nothing about it: the event is handed straight
 // to Google Calendar or Outlook on the web as a pre-filled draft, or saved as a .ics file for
 // desktop Outlook, Apple Calendar and anything else that reads the standard format.
 

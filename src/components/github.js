@@ -1,7 +1,7 @@
-// Linking to-dos to GitHub issues. Clique holds no GitHub login: a new issue is written on GitHub
+// Linking tasks to GitHub issues. Clique holds no GitHub login: a new issue is written on GitHub
 // itself under the person's own account, from a pre-filled form, and its link is pasted back here.
 
-// GitHub's new-issue form with the to-do filled in.
+// GitHub's new-issue form with the task filled in.
 export function newIssueUrl(repo, { text, owners = [], projectTitle, url }) {
   const lines = [`Task on ${projectTitle}.`];
   if (owners.length) lines.push(`Owner${owners.length > 1 ? 's' : ''}: ${owners.join(', ')}`);
