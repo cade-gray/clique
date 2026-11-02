@@ -1,6 +1,8 @@
 node_modules/
 dist/
 data/.trash/
+# npm run dev works on this copy of data/, so local testing stays out of git.
+data.local/
 # Per-deployment history, not example data: rebuilt by backfill on first run elsewhere.
 data/events.ndjson
 iisnode/
