@@ -206,3 +206,28 @@ test('a workspace with no date property simply has nothing overdue', () => {
   assert.equal(s.targetProperty, null);
   assert.equal(s.attention.some((a) => a.reasons.some((r) => r.kind === 'overdue')), false);
 });
+
+test('task events have their own activity list, so they can\'t push project activity off the default one', () => {
+  const log = [
+    { at: at(2026, 10, 1), type: 'created', project: 'p-old', title: 'Old thing', to: 'backlog' },
+    ...Array.from({ length: 30 }, (_, i) => ({ at: at(2026, 10, 2), type: 'task', project: 'p-old', title: 'Old thing', text: `t${i}`, done: true, owners: [] })),
+  ];
+  const s = computeStats({ projects, workspace, events: log, now: NOW });
+  assert.deepEqual(s.recent.map((r) => r.type), ['created']);
+  assert.equal(s.recentWithTasks.length, 25);
+  assert.deepEqual(s.recentWithTasks[0].text, 't29');
+  assert.equal(s.recentWithTasks[0].done, true);
+  assert.equal(s.recentWithTasks[0].exists, true);
+});
+
+test('the list with tasks mixes them in by time, and shows reopened tasks', () => {
+  const log = [
+    { at: at(2026, 10, 1), type: 'log-started' },
+    { at: at(2026, 10, 2), type: 'created', project: 'p-old', title: 'Old thing', to: 'backlog' },
+    { at: at(2026, 10, 3), type: 'task', project: 'p-old', title: 'Old thing', text: 'Map fields', done: false, owners: [] },
+    { at: at(2026, 10, 4), type: 'status', project: 'p-old', title: 'Old thing', from: 'backlog', to: 'live' },
+  ];
+  const { recentWithTasks } = computeStats({ projects, workspace, events: log, now: NOW });
+  assert.deepEqual(recentWithTasks.map((r) => r.type), ['status', 'task', 'created']);
+  assert.deepEqual([recentWithTasks[1].text, recentWithTasks[1].done], ['Map fields', false]);
+});

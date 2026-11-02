@@ -4,7 +4,7 @@
 //   projects/<id>/index.md      the project: frontmatter (status, properties, tasks, updates) + overview body
 //   projects/<id>/<page>.md     extra pages inside the project
 //   projects/<id>/attachments/  images pasted into the project's pages, linked as attachments/<file>
-//   events.ndjson               append-only history of creates, status moves and deletes
+//   events.ndjson               append-only history of creates, status moves, deletes and finished tasks
 //   .trash/                    deleted projects and pages land here instead of being removed
 //
 // Everything is plain text so the folder can be opened in Obsidian, diffed, or backed up as-is.
@@ -13,7 +13,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import YAML from 'yaml';
-import { EventLog } from './events.js';
+import { EventLog, taskChanges } from './events.js';
 
 // `maintenance` is derived from the open tasks and never written, but it stays reserved so the
 // leftover key in a file saved by an older version doesn't show up as a custom property.
@@ -453,6 +453,7 @@ export class Store {
       }
       const data = { ...doc.data };
       const statusBefore = doc.data.status ?? null;
+      const tasksBefore = normalizeSubtasks(doc.data.subtasks);
       const ws = await this.getWorkspace();
       if (patch.title !== undefined) data.title = String(patch.title).trim() || 'Untitled project';
       if (patch.status !== undefined) {
@@ -502,6 +503,12 @@ export class Store {
       await writeFileAtomic(file, stringifyMarkdown(data, patch.body ?? doc.body));
       if (data.status !== statusBefore)
         await this.events.append({ at: data.updated, type: 'status', project: id, title: data.title ?? id, from: statusBefore, to: data.status });
+      if (patch.subtasks !== undefined) {
+        const changes = taskChanges(tasksBefore, data.subtasks);
+        await this.events.appendAll(
+          changes.map((t) => ({ at: data.updated, type: 'task', project: id, title: data.title ?? id, text: t.text, done: t.done, owners: t.owners ?? [] })),
+        );
+      }
     });
     return this.getProject(id);
   }

@@ -206,23 +206,30 @@ export function computeStats({ projects, workspace, events, now = new Date(), mo
 
   // ----- recent activity -----
 
-  const recent = events
-    .filter((e) => e.type !== 'log-started')
-    .slice(-25)
-    .reverse()
-    .map((e) => ({
-      at: e.at,
-      type: e.type,
-      project: e.project,
-      title: e.title ?? e.project,
-      from: e.from ?? null,
-      to: e.to ?? null,
-      fromName: e.from ? nameOf(e.from) : null,
-      toName: e.to ? nameOf(e.to) : null,
-      backfilled: e.backfilled === true,
-      // Projects that have since been deleted must not be linked to.
-      exists: projects.some((p) => p.id === e.project),
-    }));
+  const latest = (list) =>
+    list
+      .slice(-25)
+      .reverse()
+      .map((e) => ({
+        at: e.at,
+        type: e.type,
+        project: e.project,
+        title: e.title ?? e.project,
+        from: e.from ?? null,
+        to: e.to ?? null,
+        fromName: e.from ? nameOf(e.from) : null,
+        toName: e.to ? nameOf(e.to) : null,
+        backfilled: e.backfilled === true,
+        // Projects that have since been deleted must not be linked to.
+        exists: projects.some((p) => p.id === e.project),
+        ...(e.type === 'task' ? { text: e.text ?? '', done: e.done === true } : {}),
+      }));
+
+  // Two lists rather than one filtered on the page: a busy day of checked-off tasks would
+  // otherwise use up the 25 rows and leave the project activity with none.
+  const activity = events.filter((e) => e.type !== 'log-started');
+  const recent = latest(activity.filter((e) => e.type !== 'task'));
+  const recentWithTasks = latest(activity);
 
   return {
     generatedAt: new Date(now).toISOString(),
@@ -236,5 +243,6 @@ export function computeStats({ projects, workspace, events, now = new Date(), mo
     attention,
     people: peopleRows,
     recent,
+    recentWithTasks,
   };
 }

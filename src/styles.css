@@ -622,6 +622,8 @@ table.list th.num, table.list td.num { text-align: right; font-variant-numeric: 
 .reason-stale { color: var(--muted); }
 table.list tr.overdue td:first-child { box-shadow: inset 3px 0 0 var(--warning); }
 table.list tr.stale td:first-child { box-shadow: inset 3px 0 0 var(--handle); }
+.activity-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.activity-toggle { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; cursor: pointer; }
 .activity { list-style: none; margin: 0; padding: 0; font-size: 13px; }
 .activity li { padding: 5px 0; border-bottom: 1px solid var(--border); }
 .activity li:last-child { border-bottom: none; }
@@ -863,4 +865,5 @@ table.list tr.stale td:first-child { box-shadow: inset 3px 0 0 var(--handle); }
 
 @media print {
   .phone-tabs { display: none; }
+  .activity-toggle { display: none; }
 }
