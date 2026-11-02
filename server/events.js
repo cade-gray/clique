@@ -9,10 +9,23 @@
 // Lines look like:
 //   {"at":"2026-10-18T09:00:00.000Z","type":"created","project":"foo","title":"Foo","to":"backlog"}
 //   {"at":"2026-10-18T11:30:00.000Z","type":"status","project":"foo","title":"Foo","from":"backlog","to":"live"}
+//   {"at":"2026-10-18T12:15:00.000Z","type":"task","project":"foo","title":"Foo","text":"Map the fields","done":true,"owners":["Sam"]}
 
 import fs from 'node:fs/promises';
 
-export const EVENT_TYPES = ['log-started', 'created', 'status', 'deleted'];
+export const EVENT_TYPES = ['log-started', 'created', 'status', 'deleted', 'task'];
+
+// The tasks in `after` that were checked off or unchecked. Tasks have no id, so they are matched
+// by text, leaving a task that was added, removed, reordered or reworded out of it. Tasks already
+// in the same state pair off first, so checking off one of two identical tasks is one change.
+export function taskChanges(before, after) {
+  const unmatched = [...before];
+  const take = (task, sameState) => {
+    const i = unmatched.findIndex((b) => b.text === task.text && (!sameState || b.done === task.done));
+    return i >= 0 && unmatched.splice(i, 1).length > 0;
+  };
+  return after.filter((task) => !take(task, true)).filter((task) => take(task, false));
+}
 
 export class EventLog {
   constructor(file) {

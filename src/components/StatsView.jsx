@@ -24,14 +24,37 @@ function reasonText(reason, targetName) {
 }
 
 function activityText(e) {
+  if (e.type === 'task') return `${e.done ? 'finished' : 'reopened'} “${e.text}”`;
   if (e.type === 'created') return e.to ? `created in ${e.toName}` : 'created';
   if (e.type === 'deleted') return e.fromName ? `deleted from ${e.fromName}` : 'deleted';
   return `moved from ${e.fromName ?? '—'} to ${e.toName ?? '—'}`;
 }
 
+// Whether recent activity includes tasks: off until someone turns it on, then remembered in this browser.
+const TASKS_KEY = 'clique-stats-show-tasks';
+function useShowTasks() {
+  const [show, setShow] = useState(() => {
+    try {
+      return localStorage.getItem(TASKS_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const update = (next) => {
+    setShow(next);
+    try {
+      localStorage.setItem(TASKS_KEY, String(next));
+    } catch {
+      // storage unavailable; the choice just won't be remembered
+    }
+  };
+  return [show, update];
+}
+
 export default function StatsView({ workspace }) {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
+  const [showTasks, setShowTasks] = useShowTasks();
 
   useEffect(() => {
     const load = () => api.stats().then((s) => { setStats(s); setError(null); }, setError);
@@ -51,6 +74,7 @@ export default function StatsView({ workspace }) {
 
   const liveName = workspace.columns.find((c) => c.id === LIVE_STATUS)?.name ?? 'Live';
   const targetName = stats.targetProperty?.name ?? '';
+  const activity = showTasks ? stats.recentWithTasks : stats.recent;
 
   const groupRows = stats.byGroup.map((g) => ({
     label: g.name,
@@ -216,12 +240,18 @@ export default function StatsView({ workspace }) {
       </section>
 
       <section>
-        <h3>Recent activity</h3>
-        {stats.recent.length === 0 ? (
+        <div className="activity-head">
+          <h3>Recent activity</h3>
+          <label className="activity-toggle">
+            <input type="checkbox" checked={showTasks} onChange={(e) => setShowTasks(e.target.checked)} />
+            Show tasks
+          </label>
+        </div>
+        {activity.length === 0 ? (
           <p className="muted">Nothing has moved yet.</p>
         ) : (
           <ul className="activity">
-            {stats.recent.map((e, i) => (
+            {activity.map((e, i) => (
               <li key={`${e.at}-${e.project}-${i}`}>
                 <span className="when" title={formatDateTime(e.at)}>
                   {timeAgo(e.at)}
