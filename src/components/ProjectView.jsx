@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, LIVE_STATUS } from '../api.js';
+import { api, LIVE_STATUS, SUMMARY_MAX } from '../api.js';
 import { navigate } from '../App.jsx';
 import { usePhone } from '../usePhone.js';
 import DocBody from './DocBody.jsx';
@@ -9,7 +9,7 @@ import { StagePicker } from './PhoneBoard.jsx';
 import Sheet from './Sheet.jsx';
 import Subtasks from './Subtasks.jsx';
 import Updates from './Updates.jsx';
-import { CardMeta, PeopleContext, PropertyInput, Tag, fitToContent, toPeople } from './props.jsx';
+import { BufferedTextarea, CardMeta, PeopleContext, PropertyInput, Tag, fitToContent, toPeople } from './props.jsx';
 
 export default function ProjectView({ id, pageId, workspace }) {
   const [project, setProject] = useState(null);
@@ -163,6 +163,7 @@ export default function ProjectView({ id, pageId, workspace }) {
                 pages={project.pages}
                 base={base}
                 repos={project.repos}
+                projectId={id}
                 projectTitle={project.title}
                 onChange={(subtasks) => patch({ subtasks })}
                 onAddDoc={addTaskDoc}
@@ -386,6 +387,7 @@ function PhoneProject({ project, pageId, workspace, base, banner, patch, onMeta,
             pages={project.pages}
             base={base}
             repos={project.repos}
+            projectId={id}
             projectTitle={project.title}
             onChange={(subtasks) => patch({ subtasks })}
             onAddDoc={onAddTaskDoc}
@@ -524,13 +526,14 @@ function PageView({ projectId, pageId, task, onChanged, onOpenTask, phone = fals
       <TitleInput multiline={phone} value={page.title} onCommit={rename} />
       {task && (
         <div className="page-task">
-          Task · story:{' '}
+          Task · Story:{' '}
           <a href={`#/p/${encodeURIComponent(projectId)}`} onClick={onOpenTask}>
             {task.text}
           </a>
           {task.done && <span className="muted"> (done)</span>}
         </div>
       )}
+      {task && <TaskSummary key={page.id} summary={page.summary} onCommit={(summary) => api.updatePage(projectId, page.id, { summary })} />}
       <DocBody
         readFirst={phone}
         docKey={`page:${projectId}/${pageId}`}
@@ -545,6 +548,32 @@ function PageView({ projectId, pageId, task, onChanged, onOpenTask, phone = fals
         </button>
       </div>
     </>
+  );
+}
+
+// Kept apart from the notes below it, because it goes out as the text of a calendar event or
+// GitHub issue. Saves when focus leaves the box; a failed save leaves the text there to try again.
+function TaskSummary({ summary, onCommit }) {
+  const [saved, setSaved] = useState(summary);
+  const [error, setError] = useState(null);
+
+  async function commit(next) {
+    try {
+      setSaved((await onCommit(next)).summary);
+      setError(null);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  return (
+    <div className="task-summary">
+      <label htmlFor="task-summary">Summary</label>
+      <BufferedTextarea id="task-summary" value={saved} maxLength={SUMMARY_MAX} placeholder="What this task is about" onCommit={commit} />
+      <p className={`small ${error ? 'task-summary-error' : 'muted'}`}>
+        {error ? `Not saved: ${error}` : 'Used as the description when you schedule this task or create an issue from it.'}
+      </p>
+    </div>
   );
 }
 

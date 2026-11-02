@@ -2,10 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { defaultStart, formatSlot, googleUrl, icsFilename, icsText, outlookUrl, subtaskEvent } from './calendar.js';
 
+const SUMMARY = 'Check the scopes, then rotate';
+
 const event = (over = {}) =>
   subtaskEvent({
     text: 'Security review of token scopes',
-    owners: ['Alex', 'Sam'],
+    summary: SUMMARY,
     projectTitle: 'Online banking real-time balances',
     url: 'http://clique.example/#/p/online-banking-real-time-balances',
     start: new Date('2026-10-23T13:00:00Z'),
@@ -20,13 +22,11 @@ test('a block defaults to an hour at 9am tomorrow, local time', () => {
   assert.equal(event().end - event().start, 60 * 60 * 1000);
 });
 
-test('the event names the task and its project, and lists the owners', () => {
+test('the event names the task and its project, and describes it with the summary', () => {
   const ev = event();
   assert.equal(ev.title, 'Security review of token scopes — Online banking real-time balances');
-  assert.match(ev.description, /^Task on Online banking real-time balances\./);
-  assert.match(ev.description, /Owners: Alex, Sam/);
-  assert.match(subtaskEvent({ text: 'x', owners: ['Alex'], projectTitle: 'P' }).description, /Owner: Alex/);
-  assert.doesNotMatch(subtaskEvent({ text: 'x', projectTitle: 'P' }).description, /Owner/);
+  assert.equal(ev.description, SUMMARY);
+  assert.equal(subtaskEvent({ text: 'x', projectTitle: 'P' }).description, '');
 });
 
 test('the Outlook link carries the compose parameters and UTC times', () => {
@@ -42,9 +42,8 @@ test('the Outlook link carries the compose parameters and UTC times', () => {
 });
 
 test('the Outlook body is HTML, with the project link clickable and the text escaped', () => {
-  const body = new URL(outlookUrl(event({ projectTitle: 'Cards & <Core>' }))).searchParams.get('body');
-  assert.match(body, /Cards &amp; &lt;Core&gt;/);
-  assert.match(body, /<br>/);
+  const body = new URL(outlookUrl(event({ summary: 'Cards & <Core>\nSecond line' }))).searchParams.get('body');
+  assert.match(body, /Cards &amp; &lt;Core&gt;<br>Second line<br>/);
   assert.match(body, /<a href="http:\/\/clique\.example\/#\/p\/online-banking-real-time-balances">/);
 });
 
@@ -54,11 +53,18 @@ test('the Google link fills in the event, with times as UTC and the link in the 
   assert.equal(url.searchParams.get('action'), 'TEMPLATE');
   assert.equal(url.searchParams.get('text'), 'Security review of token scopes — Online banking real-time balances');
   assert.equal(url.searchParams.get('dates'), '20261023T130000Z/20261023T140000Z');
-  assert.equal(url.searchParams.get('details'), 'Task on Online banking real-time balances.\nOwners: Alex, Sam\nhttp://clique.example/#/p/online-banking-real-time-balances');
+  assert.equal(url.searchParams.get('details'), `${SUMMARY}\nhttp://clique.example/#/p/online-banking-real-time-balances`);
 });
 
 test('the Google link leaves the link back out when the event has none', () => {
-  assert.equal(new URL(googleUrl(event({ url: undefined }))).searchParams.get('details'), 'Task on Online banking real-time balances.\nOwners: Alex, Sam');
+  assert.equal(new URL(googleUrl(event({ url: undefined }))).searchParams.get('details'), SUMMARY);
+});
+
+test('a task without a summary gets just the link back, with nothing above it', () => {
+  const ev = event({ summary: '' });
+  assert.equal(new URL(googleUrl(ev)).searchParams.get('details'), ev.url);
+  assert.ok(decodeURIComponent(outlookUrl(ev)).includes(`body=<a href="${ev.url}">`));
+  assert.ok(unfold(icsText(ev, { uid: 'u@clique' })).includes(`DESCRIPTION:${ev.url}`));
 });
 
 test('the .ics file is a valid single event with UTC stamps and CRLF endings', () => {
@@ -78,7 +84,7 @@ test('.ics text escapes the characters that would otherwise end a field', () => 
   const summary = unfold(ics).find((l) => l.startsWith('SUMMARY:'));
   assert.equal(summary, 'SUMMARY:Review scopes\\; tokens\\, keys \\\\ secrets — Online banking real-time balances');
   // The description keeps its line breaks as the escaped form, not real ones.
-  assert.match(unfold(ics).find((l) => l.startsWith('DESCRIPTION:')), /\\nOwners: Alex\\, Sam\\nhttp/);
+  assert.match(unfold(ics).find((l) => l.startsWith('DESCRIPTION:')), /Check the scopes\\, then rotate\\nhttp/);
 });
 
 test('long lines fold at 75 octets without splitting a character', () => {

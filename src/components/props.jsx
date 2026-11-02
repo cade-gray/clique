@@ -287,7 +287,7 @@ export function fitToContent(el) {
 }
 
 // Long text (the Summary, say) wraps in a box tall enough to read at a glance.
-function BufferedTextarea({ value, onCommit, ...rest }) {
+export function BufferedTextarea({ value, onCommit, ...rest }) {
   const initial = isEmpty(value) ? '' : String(value);
   return (
     <textarea

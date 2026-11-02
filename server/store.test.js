@@ -496,6 +496,26 @@ test('a project can share several groups, and one saved with a single group stil
   assert.doesNotMatch(await fs.readFile(file, 'utf8'), /^groups?:/m);
 });
 
+test('a page keeps its summary apart from its body', async () => {
+  const store = await freshStore();
+  const p = await store.createProject({ title: 'Summaries' });
+  const page = await store.createPage(p.id, { title: 'Notes' });
+  assert.equal(page.summary, '');
+
+  await store.updatePage(p.id, page.id, { body: 'hi' });
+  const { version } = await store.getPage(p.id, page.id);
+  const saved = await store.updatePage(p.id, page.id, { summary: '  One line.\r\nTwo lines.  ' });
+  assert.equal(saved.summary, 'One line.\nTwo lines.');
+  assert.equal(saved.body, 'hi');
+  // A summary saved mid-edit must not read as someone else changing the body.
+  assert.equal(saved.version, version);
+  assert.equal((await store.updatePage(p.id, page.id, { body: 'there', baseVersion: version })).summary, 'One line.\nTwo lines.');
+
+  assert.equal((await store.updatePage(p.id, page.id, { summary: 'x'.repeat(3000) })).summary.length, 2000);
+  assert.equal((await store.updatePage(p.id, page.id, { summary: ' ' })).summary, '');
+  assert.doesNotMatch(await fs.readFile(store.pageFile(p.id, page.id), 'utf8'), /^summary:/m);
+});
+
 test('the event log records creates, column moves and deletes', async () => {
   const store = await freshStore();
   const types = async () => (await store.events.read()).map((e) => [e.type, e.project ?? '', e.from ?? '', e.to ?? '']);

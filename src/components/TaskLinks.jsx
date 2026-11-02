@@ -1,9 +1,28 @@
 // The notes and GitHub issue controls on a task, shared by the project page and the workday page.
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { api } from '../api.js';
 import Popover from './Popover.jsx';
 import { isIssueNumber, issueLabel, issueLink, newIssueUrl, repoPath } from './github.js';
-import { toPeople } from './props.jsx';
+
+// The summary on a task's notes, read when a menu opens because it may have been edited since this
+// page loaded. Null until it's known. Without notes, or if they can't be read, there's no summary.
+export function useTaskSummary(projectId, doc, open) {
+  const [summary, setSummary] = useState(null);
+  useEffect(() => {
+    if (!open) return setSummary(null);
+    if (!doc) return setSummary('');
+    let current = true;
+    api.page(projectId, doc).then(
+      (page) => current && setSummary(page.summary),
+      () => current && setSummary(''),
+    );
+    return () => {
+      current = false;
+    };
+  }, [projectId, doc, open]);
+  return summary;
+}
 
 export function AddNotes({ onClick }) {
   return (
@@ -14,8 +33,8 @@ export function AddNotes({ onClick }) {
 }
 
 // `url` is the address the new issue links back to. `onChange` gets the issue's address, or nothing to unlink it.
-export function TaskIssue({ issue, repos, text, owners, projectTitle, url = window.location.href, onChange }) {
-  if (!issue) return repos.length > 0 && <IssueBlock repos={repos} text={text} owners={owners} projectTitle={projectTitle} url={url} onLink={onChange} />;
+export function TaskIssue({ issue, repos, text, projectId, doc, url = window.location.href, onChange }) {
+  if (!issue) return repos.length > 0 && <IssueBlock repos={repos} text={text} projectId={projectId} doc={doc} url={url} onLink={onChange} />;
   return (
     <span className="subtask-issue">
       <IssueLink url={issue} repos={repos} />
@@ -44,19 +63,20 @@ export function IssueLink({ url, repos }) {
   );
 }
 
-function IssueBlock({ repos, text, owners, projectTitle, url, onLink }) {
+function IssueBlock({ repos, text, projectId, doc, url, onLink }) {
   const [open, setOpen] = useState(false);
   const anchor = useRef(null);
+  const summary = useTaskSummary(projectId, doc, open);
   return (
     <span className="schedule">
       <button ref={anchor} className="schedule-btn" aria-expanded={open} onClick={() => setOpen((o) => !o)} title="Create or link a GitHub issue">
         🔗 Issue
       </button>
-      {open && (
+      {open && summary !== null && (
         <IssueMenu
           anchor={anchor}
           repos={repos}
-          newIssue={(repo) => newIssueUrl(repo, { text, owners: toPeople(owners), projectTitle, url })}
+          newIssue={(repo) => newIssueUrl(repo, { text, summary, url })}
           onLink={onLink}
           onClose={() => setOpen(false)}
         />

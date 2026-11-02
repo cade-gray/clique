@@ -173,9 +173,9 @@ function WorkdayTask({ task, workspace, error, onAddNotes, onIssue }) {
       ) : (
         <div className="workday-actions">
           {/* Events and issues link to the task's project, which this person can act on, not to this list. */}
-          <ScheduleButton text={task.text} owners={task.owners} projectTitle={project.title} url={projectUrl} />
+          <ScheduleButton text={task.text} projectId={project.id} doc={task.doc} projectTitle={project.title} url={projectUrl} />
           {task.doc ? <TaskDoc page={{ id: task.doc, title: task.text }} base={projectLink} /> : <AddNotes onClick={() => onAddNotes(task)} />}
-          <TaskIssue issue={task.issue} repos={project.repos} text={task.text} owners={task.owners} projectTitle={project.title} url={projectUrl} onChange={(issue) => onIssue(task, issue)} />
+          <TaskIssue issue={task.issue} repos={project.repos} text={task.text} projectId={project.id} doc={task.doc} url={projectUrl} onChange={(issue) => onIssue(task, issue)} />
         </div>
       )}
       {error && (
