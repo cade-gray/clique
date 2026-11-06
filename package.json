@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@milkdown/crepe": "^7.22.3",
-    "@milkdown/kit": "^7.22.3",
+    "@milkdown/kit": "^7.23.0",
     "@vitejs/plugin-react": "^6.1.2",
     "concurrently": "^10.0.6",
     "react": "^19.3.1",
