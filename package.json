@@ -13,7 +13,7 @@
     "yaml": "^2.9.1"
   },
   "devDependencies": {
-    "@milkdown/crepe": "^7.22.3",
+    "@milkdown/crepe": "^7.23.0",
     "@milkdown/kit": "^7.22.3",
     "@vitejs/plugin-react": "^6.1.2",
     "concurrently": "^10.0.6",
